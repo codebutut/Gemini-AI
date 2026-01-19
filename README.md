@@ -1,4 +1,4 @@
-# Gemini AI Agent - Professional Edition
+# Gemini AI Agent 
 
 A powerful, extensible, and professional-grade AI Agent application built with Python 3.10+ and PyQt6. This application integrates Google's Gemini AI models with a comprehensive suite of tools, a Multi-Agent System (MAS), and Model Context Protocol (MCP) support to provide a robust environment for automation, coding assistance, and data analysis.
 
@@ -42,8 +42,8 @@ The agent comes equipped with a wide array of built-in tools:
 ### Setup
 1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
-   cd gemini-ai-agent
+   git clone https://github.com/codebutut/Gemini-AI.git
+   cd Gemini-AI
    ```
 
 2. **Install dependencies**:

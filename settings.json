@@ -10,6 +10,6 @@
     "max_turns": 50,
     "thinking_enabled": true,
     "thinking_budget": 65536,
-    "conductor_path": "/home/xxx/Documents/scripts/gemini-ai-agent/conductor",
+    "conductor_path": "",
     "recent_items": []
 }

@@ -1,0 +1,5 @@
+prompt = """
+Analyze the current project structure and provide a high-level overview of the architecture.
+Identify key components and their responsibilities.
+Suggest potential improvements for better modularity and maintainability.
+"""

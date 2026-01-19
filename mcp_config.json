@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "gemini-agent": {
+      "command": "python",
+      "args": ["-m", "gemini_agent.mcp.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    }
+  }
+}

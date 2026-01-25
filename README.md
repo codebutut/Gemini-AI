@@ -28,7 +28,7 @@
 - **Long-Term Memory**: ChromaDB-backed vector store for semantic context retention across sessions.
 
 ### 🖥️ Modern User Interface
-- **Fluent Design**: Beautiful, responsive UI based on Windows 11 design principles.
+- **Fluent Design**: Beautiful, responsive UI based on Windows 11 design principles (in development).
 - **Project Explorer**: Integrated file browser for context management.
 - **Code & Markdown**: Rich rendering of code blocks and markdown content.
 - **Theme Support**: Native Dark and Light mode support.

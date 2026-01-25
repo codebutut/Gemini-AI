@@ -4,25 +4,33 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from . import tool, validate_args
 
+
 class FilePathArgs(BaseModel):
     filepath: str = Field(..., description="The path to the file.")
 
+
 class DirectoryArgs(BaseModel):
     directory: str = Field(".", description="The path to the directory.")
+
 
 class WriteFileArgs(BaseModel):
     filepath: str = Field(..., description="The destination path.")
     content: str = Field(..., description="The text content to write.")
 
+
 class SearchFilesArgs(BaseModel):
     directory: str = Field(..., description="Directory to search in.")
-    pattern: str = Field(..., description="Search pattern (supports * and ? wildcards).")
+    pattern: str = Field(
+        ..., description="Search pattern (supports * and ? wildcards)."
+    )
     recursive: bool = Field(True, description="Whether to search recursively.")
+
 
 class FindInFilesArgs(BaseModel):
     directory: str = Field(..., description="Directory to search in.")
     search_text: str = Field(..., description="Text to search for.")
     file_pattern: str = Field("*.py", description="File pattern to search within.")
+
 
 @tool
 @validate_args(DirectoryArgs)
@@ -47,6 +55,7 @@ def list_files(directory: str = ".") -> str:
         return "\n".join(items) if items else "(Empty Directory)"
     except PermissionError:
         return f"Error: Permission denied for directory '{directory}'."
+
 
 @tool
 @validate_args(FilePathArgs)
@@ -77,6 +86,7 @@ def read_file(filepath: str) -> str:
     except PermissionError:
         return f"Error: Permission denied for file '{filepath}'."
 
+
 @tool
 @validate_args(WriteFileArgs)
 def write_file(filepath: str, content: str) -> str:
@@ -99,6 +109,7 @@ def write_file(filepath: str, content: str) -> str:
         return f"Successfully wrote {len(content)} characters to '{filepath}'."
     except PermissionError:
         return f"Error: Permission denied writing to '{filepath}'."
+
 
 @tool
 @validate_args(SearchFilesArgs)
@@ -134,6 +145,7 @@ def search_files(directory: str, pattern: str, recursive: bool = True) -> str:
         )
     except Exception as e:
         return f"Error searching files: {str(e)}"
+
 
 @tool
 @validate_args(FindInFilesArgs)
@@ -171,6 +183,7 @@ def find_in_files(directory: str, search_text: str, file_pattern: str = "*.py") 
     except Exception as e:
         return f"Error searching in files: {str(e)}"
 
+
 @tool
 @validate_args(FilePathArgs)
 def read_pdf(filepath: str) -> str:
@@ -185,27 +198,31 @@ def read_pdf(filepath: str) -> str:
     """
     try:
         import pdfplumber
+
         output = []
         with pdfplumber.open(filepath) as pdf:
             for i, page in enumerate(pdf.pages):
-                output.append(f"--- Page {i+1} ---")
+                output.append(f"--- Page {i + 1} ---")
                 text = page.extract_text()
                 if text:
                     output.append(text)
-                
+
                 tables = page.extract_tables()
                 for table_idx, table in enumerate(tables):
-                    output.append(f"\n[Table {table_idx+1}]")
+                    output.append(f"\n[Table {table_idx + 1}]")
                     for row in table:
                         # Filter out None values and join with |
-                        row_str = " | ".join([str(cell) if cell is not None else "" for cell in row])
+                        row_str = " | ".join(
+                            [str(cell) if cell is not None else "" for cell in row]
+                        )
                         output.append(row_str)
-        
+
         return "\n".join(output) if output else "No content found in PDF."
     except ImportError:
         # Fallback to fitz if pdfplumber is not available
         try:
             import fitz
+
             doc = fitz.open(filepath)
             text = ""
             for page in doc:
@@ -216,6 +233,7 @@ def read_pdf(filepath: str) -> str:
             return f"Error reading PDF (Fallback): {str(e)}"
     except Exception as e:
         return f"Error reading PDF: {str(e)}"
+
 
 @tool
 @validate_args(FilePathArgs)
@@ -231,6 +249,7 @@ def read_docx(filepath: str) -> str:
     """
     try:
         from docx import Document
+
         doc = Document(filepath)
         text = []
         for para in doc.paragraphs:
@@ -238,6 +257,7 @@ def read_docx(filepath: str) -> str:
         return "\n".join(text) if text else "No text found in DOCX."
     except Exception as e:
         return f"Error reading DOCX: {str(e)}"
+
 
 @tool
 @validate_args(FilePathArgs)
@@ -253,6 +273,7 @@ def read_excel(filepath: str) -> str:
     """
     try:
         import pandas as pd
+
         xl = pd.ExcelFile(filepath)
         output = []
         for sheet_name in xl.sheet_names:
@@ -262,6 +283,7 @@ def read_excel(filepath: str) -> str:
         return "\n".join(output)
     except Exception as e:
         return f"Error reading Excel: {str(e)}"
+
 
 @tool
 @validate_args(FilePathArgs)
@@ -277,19 +299,20 @@ def read_pptx(filepath: str) -> str:
     """
     try:
         from pptx import Presentation
+
         prs = Presentation(filepath)
         output = []
         for i, slide in enumerate(prs.slides):
-            output.append(f"--- Slide {i+1} ---")
+            output.append(f"--- Slide {i + 1} ---")
             for shape in slide.shapes:
                 if hasattr(shape, "text"):
                     output.append(shape.text)
-            
+
             if slide.has_notes_slide:
                 notes = slide.notes_slide.notes_text_frame.text
                 if notes:
                     output.append(f"\n[Notes]: {notes}")
-        
+
         return "\n".join(output) if output else "No content found in PPTX."
     except Exception as e:
         return f"Error reading PPTX: {str(e)}"

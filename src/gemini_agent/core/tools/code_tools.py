@@ -12,39 +12,56 @@ from pydantic import BaseModel, Field
 from . import tool, validate_args
 from .file_tools import FilePathArgs, find_in_files
 
+
 class RefactorArgs(BaseModel):
     filepath: str = Field(..., description="Path to Python file.")
-    changes: list[dict[str, Any]] = Field(..., description="List of refactoring operations.")
+    changes: list[dict[str, Any]] = Field(
+        ..., description="List of refactoring operations."
+    )
+
 
 class GenerateTestsArgs(BaseModel):
     filepath: str = Field(..., description="Path to Python file to generate tests for.")
     output_dir: str | None = Field(None, description="Directory to save test files.")
 
+
 class DebugArgs(BaseModel):
     code: str = Field(..., description="Python code to debug.")
     breakpoints: list[int] | None = Field(None, description="Line numbers to break at.")
+
 
 class ProfileArgs(BaseModel):
     code: str = Field(..., description="Python code to profile.")
     function_name: str | None = Field(None, description="Specific function to profile.")
 
+
 class SearchCodebaseArgs(BaseModel):
     query: str = Field(..., description="Regex pattern to search for.")
     directory: str = Field(".", description="Root directory to search.")
-    file_pattern: str | None = Field(None, description="Glob pattern for file filtering (e.g., '*.py').")
+    file_pattern: str | None = Field(
+        None, description="Glob pattern for file filtering (e.g., '*.py')."
+    )
     case_sensitive: bool = Field(False, description="Case sensitive search.")
+
 
 class ExecutePythonEnvArgs(BaseModel):
     code: str = Field(..., description="Python code to execute.")
-    imports: list[str] | None = Field(None, description="List of modules to import before execution.")
+    imports: list[str] | None = Field(
+        None, description="List of modules to import before execution."
+    )
+
 
 class MermaidArgs(BaseModel):
     code: str = Field(..., description="Mermaid.js diagram code.")
-    output_file: str = Field("diagram.mmd", description="Path to save the mermaid file.")
+    output_file: str = Field(
+        "diagram.mmd", description="Path to save the mermaid file."
+    )
+
 
 class DependencyGraphArgs(BaseModel):
     directory: str = Field(".", description="The directory to analyze.")
     recursive: bool = Field(True, description="Whether to search recursively.")
+
 
 class CodeAnalyzer:
     """Static code analysis utilities."""
@@ -70,16 +87,22 @@ class CodeAnalyzer:
                     analysis["functions"] += 1
                     complexity = CodeAnalyzer._calculate_complexity(node)
                     if complexity > 10:
-                        analysis["complex_functions"].append(f"  - {node.name}: complexity {complexity}")
+                        analysis["complex_functions"].append(
+                            f"  - {node.name}: complexity {complexity}"
+                        )
                 elif isinstance(node, ast.ClassDef):
                     analysis["classes"] += 1
                 elif isinstance(node, (ast.Import, ast.ImportFrom)):
                     analysis["imports"] += 1
 
                 if isinstance(node, ast.ExceptHandler) and node.type is None:
-                    analysis["issues"].append(f"Bare except clause found (line {node.lineno})")
+                    analysis["issues"].append(
+                        f"Bare except clause found (line {node.lineno})"
+                    )
                 elif isinstance(node, ast.Assert):
-                    analysis["issues"].append(f"Assert statement found (line {node.lineno})")
+                    analysis["issues"].append(
+                        f"Assert statement found (line {node.lineno})"
+                    )
 
             report = [
                 f"File: {filepath}",
@@ -108,6 +131,7 @@ class CodeAnalyzer:
                 complexity += len(child.values) - 1
         return complexity
 
+
 @tool
 @validate_args(FilePathArgs)
 def analyze_python_file(filepath: str) -> str:
@@ -121,6 +145,7 @@ def analyze_python_file(filepath: str) -> str:
         str: Analysis report or error message.
     """
     return CodeAnalyzer.analyze_code(filepath)
+
 
 @tool
 @validate_args(RefactorArgs)
@@ -154,11 +179,17 @@ def refactor_code(filepath: str, changes: list[dict[str, Any]]) -> str:
                     continue
 
                 try:
-                    tokens = list(tokenize.generate_tokens(io.StringIO(content).readline))
+                    tokens = list(
+                        tokenize.generate_tokens(io.StringIO(content).readline)
+                    )
                 except tokenize.TokenError:
                     return "Error: Could not tokenize file (syntax error?)"
 
-                replacements = [t for t in tokens if t.type == tokenize.NAME and t.string == old_name]
+                replacements = [
+                    t
+                    for t in tokens
+                    if t.type == tokenize.NAME and t.string == old_name
+                ]
                 lines = content.splitlines(keepends=True)
                 new_lines = []
                 replacements_by_line = {}
@@ -168,7 +199,11 @@ def refactor_code(filepath: str, changes: list[dict[str, Any]]) -> str:
 
                 for i, line in enumerate(lines):
                     if i in replacements_by_line:
-                        line_repls = sorted(replacements_by_line[i], key=lambda t: t.start[1], reverse=True)
+                        line_repls = sorted(
+                            replacements_by_line[i],
+                            key=lambda t: t.start[1],
+                            reverse=True,
+                        )
                         for t in line_repls:
                             line = line[: t.start[1]] + new_name + line[t.end[1] :]
                         new_lines.append(line)
@@ -181,6 +216,7 @@ def refactor_code(filepath: str, changes: list[dict[str, Any]]) -> str:
         return f"Code refactored. Backup saved to {backup_path}"
     except Exception as e:
         return f"Error refactoring code: {str(e)}"
+
 
 @tool
 @validate_args(GenerateTestsArgs)
@@ -236,6 +272,7 @@ def generate_tests(filepath: str, output_dir: str | None = None) -> str:
     except Exception as e:
         return f"Error generating tests: {str(e)}"
 
+
 @tool
 @validate_args(DebugArgs)
 def debug_python(code: str, breakpoints: list[int] | None = None) -> str:
@@ -250,13 +287,17 @@ def debug_python(code: str, breakpoints: list[int] | None = None) -> str:
         str: Debugging output.
     """
     try:
-        with tempfile.NamedTemporaryFile(mode="w", suffix="_debug.py", delete=False, encoding="utf-8") as tmp:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix="_debug.py", delete=False, encoding="utf-8"
+        ) as tmp:
             debug_code = f"import sys\nimport traceback\n\n{code}"
             tmp.write(debug_code)
             tmp_path = tmp.name
 
         try:
-            result = subprocess.run([sys.executable, tmp_path], capture_output=True, text=True, timeout=30)
+            result = subprocess.run(
+                [sys.executable, tmp_path], capture_output=True, text=True, timeout=30
+            )
             output = []
             if result.stdout:
                 output.append(f"Output:\n{result.stdout}")
@@ -268,6 +309,7 @@ def debug_python(code: str, breakpoints: list[int] | None = None) -> str:
                 os.remove(tmp_path)
     except subprocess.TimeoutExpired:
         return "Error: Debug session timed out (30s limit)."
+
 
 @tool
 @validate_args(ProfileArgs)
@@ -284,7 +326,12 @@ def profile_code(code: str, function_name: str | None = None) -> str:
     """
     try:
         profile_script = f"import cProfile, pstats, io\ndef run_code():\n{chr(10).join('    ' + l for l in code.splitlines())}\nif __name__ == '__main__':\n    profiler = cProfile.Profile()\n    profiler.enable()\n    try: run_code()\n    except Exception as e: print(f'Error: {{e}}')\n    profiler.disable()\n    s = io.StringIO()\n    ps = pstats.Stats(profiler, stream=s).sort_stats('cumulative')\n    ps.print_stats(20)\n    print(s.getvalue())"
-        result = subprocess.run([sys.executable, "-c", profile_script], capture_output=True, text=True, timeout=60)
+        result = subprocess.run(
+            [sys.executable, "-c", profile_script],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
         output = []
         if result.stdout:
             output.append(f"Profiling Results:\n{result.stdout}")
@@ -294,10 +341,14 @@ def profile_code(code: str, function_name: str | None = None) -> str:
     except subprocess.TimeoutExpired:
         return "Error: Profiling timed out (60s limit)."
 
+
 @tool
 @validate_args(SearchCodebaseArgs)
 def search_codebase(
-    query: str, directory: str = ".", file_pattern: str | None = None, case_sensitive: bool = False
+    query: str,
+    directory: str = ".",
+    file_pattern: str | None = None,
+    case_sensitive: bool = False,
 ) -> str:
     """
     Fast code search using ripgrep (rg) if available, falling back to python.
@@ -340,6 +391,7 @@ def search_codebase(
     except Exception as e:
         return f"Error searching codebase: {str(e)}"
 
+
 @tool
 @validate_args(ExecutePythonEnvArgs)
 def execute_python_with_env(code: str, imports: list[str] | None = None) -> str:
@@ -356,7 +408,12 @@ def execute_python_with_env(code: str, imports: list[str] | None = None) -> str:
     try:
         import_code = "".join(f"import {imp}\n" for imp in (imports or []))
         full_code = f"{import_code}\n{code}"
-        result = subprocess.run([sys.executable, "-c", full_code], capture_output=True, text=True, timeout=30)
+        result = subprocess.run(
+            [sys.executable, "-c", full_code],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
         output = []
         if result.stdout:
             output.append(f"Output:\n{result.stdout}")
@@ -365,6 +422,7 @@ def execute_python_with_env(code: str, imports: list[str] | None = None) -> str:
         return "\n".join(output) if output else "(No output)"
     except subprocess.TimeoutExpired:
         return "Error: Code execution timed out (30s limit)."
+
 
 @tool
 @validate_args(MermaidArgs)
@@ -388,6 +446,7 @@ def render_mermaid(code: str, output_file: str = "diagram.mmd") -> str:
     except Exception as e:
         return f"Error saving Mermaid diagram: {str(e)}"
 
+
 @tool
 @validate_args(DependencyGraphArgs)
 def get_dependency_graph(directory: str = ".", recursive: bool = True) -> str:
@@ -404,16 +463,16 @@ def get_dependency_graph(directory: str = ".", recursive: bool = True) -> str:
     try:
         dependencies = {}
         path = Path(directory)
-        
+
         pattern = "**/*.py" if recursive else "*.py"
         for py_file in path.glob(pattern):
             try:
                 with open(py_file, "r", encoding="utf-8", errors="ignore") as f:
                     tree = ast.parse(f.read())
-                
+
                 rel_path = py_file.relative_to(path)
                 module_name = str(rel_path).replace(os.sep, ".").removesuffix(".py")
-                
+
                 file_deps = []
                 for node in ast.walk(tree):
                     if isinstance(node, ast.Import):
@@ -422,18 +481,18 @@ def get_dependency_graph(directory: str = ".", recursive: bool = True) -> str:
                     elif isinstance(node, ast.ImportFrom):
                         if node.module:
                             file_deps.append(node.module)
-                
+
                 dependencies[module_name] = sorted(list(set(file_deps)))
             except Exception:
                 continue
-        
+
         if not dependencies:
             return "No Python files found or could not parse them."
-            
+
         output = ["Dependency Graph:"]
         for mod, deps in dependencies.items():
             output.append(f"  {mod} -> {', '.join(deps)}")
-            
+
         return "\n".join(output)
     except Exception as e:
         return f"Error generating dependency graph: {str(e)}"

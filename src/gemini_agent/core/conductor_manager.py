@@ -25,7 +25,9 @@ class ConductorManager:
             # Points to the root project directory's conductor folder
             # Path(__file__) is src/gemini_agent/core/conductor_manager.py
             # .parent.parent.parent.parent is the project root
-            self.extension_path = Path(__file__).resolve().parent.parent.parent.parent / "conductor"
+            self.extension_path = (
+                Path(__file__).resolve().parent.parent.parent.parent / "conductor"
+            )
 
         self.commands_path: Path = self.extension_path / "commands" / "conductor"
         self.templates_path: Path = self.extension_path / "templates"
@@ -35,7 +37,9 @@ class ConductorManager:
     def _load_commands(self) -> None:
         """Loads all TOML command definitions from the commands directory."""
         if not self.commands_path.exists():
-            logging.warning(f"Conductor commands path does not exist: {self.commands_path}")
+            logging.warning(
+                f"Conductor commands path does not exist: {self.commands_path}"
+            )
             return
 
         for toml_file in self.commands_path.glob("*.toml"):
@@ -82,7 +86,9 @@ class ConductorManager:
         """
         conductor_dir = Path(project_path) / "conductor"
         required_files = ["product.md", "tech-stack.md", "workflow.md"]
-        return conductor_dir.exists() and all((conductor_dir / f).exists() for f in required_files)
+        return conductor_dir.exists() and all(
+            (conductor_dir / f).exists() for f in required_files
+        )
 
     def get_setup_state(self, project_path: str = ".") -> dict[str, Any] | None:
         """

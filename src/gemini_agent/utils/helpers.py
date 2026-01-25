@@ -26,10 +26,14 @@ class RateLimiter:
         self._stop_event = threading.Event()
 
         # Calculate refill rate
-        self.refill_interval = self.period / self.max_requests if self.max_requests > 0 else self.period
+        self.refill_interval = (
+            self.period / self.max_requests if self.max_requests > 0 else self.period
+        )
 
         if self.auto_refill:
-            self._refill_thread = threading.Thread(target=self._refill_loop, daemon=True)
+            self._refill_thread = threading.Thread(
+                target=self._refill_loop, daemon=True
+            )
             self._refill_thread.start()
 
     def _refill_loop(self) -> None:
@@ -105,5 +109,9 @@ class RateLimiter:
             self.tokens = remaining
             self.max_requests = limit
             # Recalculate refill interval if limit changed
-            self.refill_interval = self.period / self.max_requests if self.max_requests > 0 else self.period
+            self.refill_interval = (
+                self.period / self.max_requests
+                if self.max_requests > 0
+                else self.period
+            )
             self.condition.notify_all()

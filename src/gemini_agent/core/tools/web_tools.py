@@ -4,15 +4,18 @@ from typing import Any
 from pydantic import BaseModel, Field
 from . import tool, validate_args
 
+
 class FetchUrlArgs(BaseModel):
     url: str = Field(..., description="URL to fetch.")
     method: str = Field("GET", description="HTTP method.")
     data: dict[str, Any] | None = Field(None, description="POST data (if any).")
 
+
 class FetchDynamicUrlArgs(BaseModel):
     url: str = Field(..., description="URL to fetch.")
     wait_for_selector: str | None = Field(None, description="CSS selector to wait for.")
     timeout: int = Field(30000, description="Timeout in milliseconds.")
+
 
 @tool
 @validate_args(FetchUrlArgs)
@@ -46,9 +49,12 @@ def fetch_url(url: str, method: str = "GET", data: dict[str, Any] | None = None)
     except Exception as e:
         return f"Request Error: {str(e)}"
 
+
 @tool
 @validate_args(FetchDynamicUrlArgs)
-def fetch_dynamic_url(url: str, wait_for_selector: str | None = None, timeout: int = 30000) -> str:
+def fetch_dynamic_url(
+    url: str, wait_for_selector: str | None = None, timeout: int = 30000
+) -> str:
     """
     Fetches data from a URL that requires JavaScript rendering (dynamic content).
 
@@ -62,22 +68,24 @@ def fetch_dynamic_url(url: str, wait_for_selector: str | None = None, timeout: i
     """
     try:
         from playwright.sync_api import sync_playwright
-        
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
             page.goto(url, timeout=timeout)
-            
+
             if wait_for_selector:
                 page.wait_for_selector(wait_for_selector, timeout=timeout)
-            
+
             content = page.content()
             # Extract text content for better readability if it's a large page
             text_content = page.evaluate("() => document.body.innerText")
             browser.close()
-            
+
             return text_content[:15000] if text_content else content[:15000]
     except ImportError:
-        return "Error: 'playwright' is not installed. Please install it to use this tool."
+        return (
+            "Error: 'playwright' is not installed. Please install it to use this tool."
+        )
     except Exception as e:
         return f"Dynamic Fetch Error: {str(e)}"

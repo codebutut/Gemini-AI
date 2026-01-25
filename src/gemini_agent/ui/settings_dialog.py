@@ -1,4 +1,5 @@
-from PyQt6.QtCore import Qt
+import qtawesome as qta
+from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -51,8 +52,12 @@ class SettingsDialog(QDialog):
         # Create scroll area
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll_area.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.scroll_area.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
         self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
 
         # Create container widget for scroll area
@@ -80,11 +85,22 @@ class SettingsDialog(QDialog):
         self.model_combo.currentIndexChanged.connect(self.save_general_settings)
         self.scroll_layout.addWidget(self.model_combo)
 
+        model_info_container = QWidget()
+        model_info_layout = QHBoxLayout(model_info_container)
+        model_info_layout.setContentsMargins(0, 0, 0, 0)
+        model_info_layout.setSpacing(5)
+
+        info_icon = QLabel()
+        info_icon.setPixmap(qta.icon("fa5s.lightbulb", color="#888").pixmap(12, 12))
         model_info = QLabel(
-            "💡 Gemini 3 Series: Advanced reasoning | Gemini 2.5 Series: Current stable | Flash: Fast & efficient"
+            "Gemini 3 Series: Advanced reasoning | Gemini 2.5 Series: Current stable | Flash: Fast & efficient"
         )
         model_info.setStyleSheet("color: #888; font-size: 11px; font-style: italic;")
-        self.scroll_layout.addWidget(model_info)
+        model_info_layout.addWidget(info_icon)
+        model_info_layout.addWidget(model_info)
+        model_info_layout.addStretch()
+
+        self.scroll_layout.addWidget(model_info_container)
 
         # 2. API Key
         self.scroll_layout.addWidget(QLabel("API Key:"))
@@ -95,7 +111,9 @@ class SettingsDialog(QDialog):
         self.scroll_layout.addWidget(self.api_input)
 
         # 3. Grounding
-        self.chk_grounding = QCheckBox("Enable Google Search Grounding (Web queries only)")
+        self.chk_grounding = QCheckBox(
+            "Enable Google Search Grounding (Web queries only)"
+        )
         self.chk_grounding.setChecked(self.config.get("use_search", False))
         self.chk_grounding.toggled.connect(self.save_general_settings)
         self.scroll_layout.addWidget(self.chk_grounding)
@@ -120,8 +138,11 @@ class SettingsDialog(QDialog):
             checkpoint_layout.addWidget(QLabel("Create New Checkpoint:"))
             create_layout = QHBoxLayout()
             self.checkpoint_name_input = QLineEdit()
-            self.checkpoint_name_input.setPlaceholderText("Checkpoint Name (e.g., Before refactoring)")
-            self.btn_create_checkpoint = QPushButton("Create")
+            self.checkpoint_name_input.setPlaceholderText(
+                "Checkpoint Name (e.g., Before refactoring)"
+            )
+            self.btn_create_checkpoint = QPushButton(" Create")
+            self.btn_create_checkpoint.setIcon(qta.icon("fa5s.plus", color="white"))
             self.btn_create_checkpoint.clicked.connect(self.create_checkpoint)
             create_layout.addWidget(self.checkpoint_name_input)
             create_layout.addWidget(self.btn_create_checkpoint)
@@ -133,9 +154,11 @@ class SettingsDialog(QDialog):
             checkpoint_layout.addWidget(self.checkpoint_list)
 
             btn_layout = QHBoxLayout()
-            self.btn_restore_checkpoint = QPushButton("Restore Selected")
+            self.btn_restore_checkpoint = QPushButton(" Restore Selected")
+            self.btn_restore_checkpoint.setIcon(qta.icon("fa5s.undo", color="white"))
             self.btn_restore_checkpoint.clicked.connect(self.restore_checkpoint)
-            self.btn_delete_checkpoint = QPushButton("Delete Selected")
+            self.btn_delete_checkpoint = QPushButton(" Delete Selected")
+            self.btn_delete_checkpoint.setIcon(qta.icon("fa5s.trash-alt", color="#eee"))
             self.btn_delete_checkpoint.clicked.connect(self.delete_checkpoint)
             btn_layout.addWidget(self.btn_restore_checkpoint)
             btn_layout.addWidget(self.btn_delete_checkpoint)
@@ -151,12 +174,14 @@ class SettingsDialog(QDialog):
         path_layout = QHBoxLayout()
         self.conductor_path_input = QLineEdit(self.config.get("conductor_path", ""))
         self.conductor_path_input.setReadOnly(True)
-        btn_browse_conductor = QPushButton("Browse")
+        btn_browse_conductor = QPushButton(" Browse")
+        btn_browse_conductor.setIcon(qta.icon("fa5s.folder-open", color="#eee"))
         btn_browse_conductor.clicked.connect(self.browse_conductor_path)
         path_layout.addWidget(self.conductor_path_input)
         path_layout.addWidget(btn_browse_conductor)
         conductor_layout.addLayout(path_layout)
-        self.btn_open_conductor = QPushButton("🚀 Open Conductor Orchestrator")
+        self.btn_open_conductor = QPushButton(" Open Conductor Orchestrator")
+        self.btn_open_conductor.setIcon(qta.icon("fa5s.rocket", color="white"))
         self.btn_open_conductor.clicked.connect(self.open_conductor_dialog)
         conductor_layout.addWidget(self.btn_open_conductor)
         conductor_group.setLayout(conductor_layout)
@@ -177,7 +202,8 @@ class SettingsDialog(QDialog):
         self.spin_thinking_budget.setSuffix(" tokens")
         thinking_budget_layout.addWidget(self.spin_thinking_budget)
         thinking_layout.addLayout(thinking_budget_layout)
-        self.btn_save_thinking = QPushButton("Save Thinking Settings")
+        self.btn_save_thinking = QPushButton(" Save Thinking Settings")
+        self.btn_save_thinking.setIcon(qta.icon("fa5s.save", color="white"))
         self.btn_save_thinking.clicked.connect(self.save_thinking_params)
         thinking_layout.addWidget(self.btn_save_thinking)
         thinking_group.setLayout(thinking_layout)
@@ -221,7 +247,8 @@ class SettingsDialog(QDialog):
         hbox_turns.addWidget(self.spin_max_turns)
         turns_layout.addLayout(hbox_turns)
         param_layout.addLayout(turns_layout)
-        self.btn_save_params = QPushButton("Save Parameters")
+        self.btn_save_params = QPushButton(" Save Parameters")
+        self.btn_save_params.setIcon(qta.icon("fa5s.save", color="white"))
         self.btn_save_params.clicked.connect(self.save_generation_params)
         param_layout.addWidget(self.btn_save_params)
         param_group.setLayout(param_layout)
@@ -233,7 +260,8 @@ class SettingsDialog(QDialog):
         self.txt_system_instruction.setFixedHeight(120)
         self.txt_system_instruction.setText(self.config.get("system_instruction", ""))
         self.scroll_layout.addWidget(self.txt_system_instruction)
-        self.btn_save_sys = QPushButton("Save System Instruction")
+        self.btn_save_sys = QPushButton(" Save System Instruction")
+        self.btn_save_sys.setIcon(qta.icon("fa5s.save", color="white"))
         self.btn_save_sys.clicked.connect(self.save_system_instruction)
         self.scroll_layout.addWidget(self.btn_save_sys)
 
@@ -256,19 +284,25 @@ class SettingsDialog(QDialog):
         self.checkpoint_list.clear()
         checkpoints = self.checkpoint_manager.list_checkpoints()
         for cp in reversed(checkpoints):
-            item = QListWidgetItem(f"{cp['name']} ({cp['timestamp'][:19].replace('T', ' ')})")
+            item = QListWidgetItem(
+                f"{cp['name']} ({cp['timestamp'][:19].replace('T', ' ')})"
+            )
             item.setData(Qt.ItemDataRole.UserRole, cp["id"])
             self.checkpoint_list.addItem(item)
 
     def create_checkpoint(self):
         name = self.checkpoint_name_input.text().strip()
         if not name:
-            QMessageBox.warning(self, "Warning", "Please enter a name for the checkpoint.")
+            QMessageBox.warning(
+                self, "Warning", "Please enter a name for the checkpoint."
+            )
             return
 
         cp = self.checkpoint_manager.create_checkpoint(name)
         if cp:
-            QMessageBox.information(self, "Success", f"Checkpoint '{name}' created successfully.")
+            QMessageBox.information(
+                self, "Success", f"Checkpoint '{name}' created successfully."
+            )
             self.checkpoint_name_input.clear()
             self.refresh_checkpoints()
         else:
@@ -277,7 +311,9 @@ class SettingsDialog(QDialog):
     def restore_checkpoint(self):
         selected_item = self.checkpoint_list.currentItem()
         if not selected_item:
-            QMessageBox.warning(self, "Warning", "Please select a checkpoint to restore.")
+            QMessageBox.warning(
+                self, "Warning", "Please select a checkpoint to restore."
+            )
             return
 
         checkpoint_id = selected_item.data(Qt.ItemDataRole.UserRole)
@@ -305,7 +341,9 @@ class SettingsDialog(QDialog):
     def delete_checkpoint(self):
         selected_item = self.checkpoint_list.currentItem()
         if not selected_item:
-            QMessageBox.warning(self, "Warning", "Please select a checkpoint to delete.")
+            QMessageBox.warning(
+                self, "Warning", "Please select a checkpoint to delete."
+            )
             return
 
         checkpoint_id = selected_item.data(Qt.ItemDataRole.UserRole)
@@ -326,7 +364,9 @@ class SettingsDialog(QDialog):
 
     def browse_conductor_path(self):
         path = QFileDialog.getExistingDirectory(
-            self, "Select Conductor Extension Directory", self.conductor_path_input.text()
+            self,
+            "Select Conductor Extension Directory",
+            self.conductor_path_input.text(),
         )
         if path:
             self.conductor_path_input.setText(path)
@@ -335,7 +375,9 @@ class SettingsDialog(QDialog):
             if hasattr(self.main_window, "conductor_manager"):
                 from gemini_agent.core.conductor_manager import ConductorManager
 
-                self.main_window.conductor_manager = ConductorManager(extension_path=path)
+                self.main_window.conductor_manager = ConductorManager(
+                    extension_path=path
+                )
 
     def open_conductor_dialog(self):
         from gemini_agent.ui.conductor_dialog import ConductorDialog
@@ -372,7 +414,9 @@ class SettingsDialog(QDialog):
         QMessageBox.information(self, "Saved", "Parameters saved.")
 
     def save_system_instruction(self):
-        self.config["system_instruction"] = self.txt_system_instruction.toPlainText().strip()
+        self.config["system_instruction"] = (
+            self.txt_system_instruction.toPlainText().strip()
+        )
         save_json(AppConfig.CONFIG_FILE, self.config)
         QMessageBox.information(self, "Saved", "Instructions saved.")
 

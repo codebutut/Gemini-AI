@@ -2,6 +2,7 @@ from typing import List
 from langchain_core.tools import StructuredTool
 from gemini_agent.core.tools import TOOL_REGISTRY
 
+
 def get_langchain_tools() -> List[StructuredTool]:
     """
     Converts all registered tools in TOOL_REGISTRY to LangChain StructuredTools.

@@ -7,17 +7,21 @@ from pydantic import BaseModel, Field
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 
+
 class AgentEvent(BaseModel):
     event_type: str
     session_id: str
     task_id: Optional[str] = None
     agent_name: Optional[str] = None
     data: Dict[str, Any] = Field(default_factory=dict)
-    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
+
 
 class AsyncEventBus:
     """A simple asynchronous event bus for internal pub-sub."""
-    
+
     def __init__(self):
         self._subscribers: Dict[str, Set[Callable]] = {}
         self._global_subscribers: Set[Callable] = set()
@@ -60,10 +64,13 @@ class AsyncEventBus:
         except Exception as e:
             print(f"Error in event bus callback: {e}")
 
+
 class RealTimeServer:
     """FastAPI server to expose events via WebSocket and SSE."""
-    
-    def __init__(self, event_bus: AsyncEventBus, host: str = "127.0.0.1", port: int = 8000):
+
+    def __init__(
+        self, event_bus: AsyncEventBus, host: str = "127.0.0.1", port: int = 8000
+    ):
         self.event_bus = event_bus
         self.host = host
         self.port = port
@@ -83,7 +90,7 @@ class RealTimeServer:
             if session_id not in self._active_connections:
                 self._active_connections[session_id] = set()
             self._active_connections[session_id].add(websocket)
-            
+
             try:
                 while True:
                     # Keep connection alive
@@ -95,27 +102,31 @@ class RealTimeServer:
         async def sse_endpoint(session_id: str):
             async def event_generator():
                 queue = asyncio.Queue()
-                
+
                 async def on_event(event: AgentEvent):
                     if event.session_id == session_id:
                         await queue.put(event)
-                
+
                 await self.event_bus.subscribe_all(on_event)
                 try:
                     while True:
                         event = await queue.get()
                         yield f"data: {event.model_dump_json()}\n\n"
                 finally:
-                    await self.event_bus.unsubscribe("all", on_event) # Simplified unsubscribe
+                    await self.event_bus.unsubscribe(
+                        "all", on_event
+                    )  # Simplified unsubscribe
 
             return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     async def start(self):
         """Starts the server in the background."""
-        config = uvicorn.Config(self.app, host=self.host, port=self.port, log_level="info")
+        config = uvicorn.Config(
+            self.app, host=self.host, port=self.port, log_level="info"
+        )
         server = uvicorn.Server(config)
         self._server_task = asyncio.create_task(server.serve())
-        
+
         # Subscribe to all events to broadcast to WebSockets
         await self.event_bus.subscribe_all(self._broadcast_to_websockets)
 
@@ -136,6 +147,6 @@ class RealTimeServer:
                     await ws.send_json(event.model_dump())
                 except Exception:
                     disconnected.add(ws)
-            
+
             for ws in disconnected:
                 self._active_connections[session_id].remove(ws)

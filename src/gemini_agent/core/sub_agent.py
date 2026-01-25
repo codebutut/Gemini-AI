@@ -47,14 +47,19 @@ class SubAgent:
         if "--gemini" not in prompt:
             prompt = f"{prompt}\n\n{self.DEFAULT_FLAGS}"
 
-        current_content = types.Content(role="user", parts=[types.Part.from_text(text=prompt)])
+        current_content = types.Content(
+            role="user", parts=[types.Part.from_text(text=prompt)]
+        )
         self.history.append(current_content)
 
         tools_config = tools.get_tool_config()
 
         # Generation config
         gen_config = types.GenerateContentConfig(
-            temperature=0.7, top_p=0.95, tools=[tools_config], system_instruction=system_instruction
+            temperature=0.7,
+            top_p=0.95,
+            tools=[tools_config],
+            system_instruction=system_instruction,
         )
 
         turn = 0
@@ -96,12 +101,16 @@ class SubAgent:
                             result = f"Error executing {fn_name}: {e}"
 
                         function_responses.append(
-                            types.Part.from_function_response(name=fn_name, response={"result": result})
+                            types.Part.from_function_response(
+                                name=fn_name, response={"result": result}
+                            )
                         )
 
                 if function_responses:
                     # Send tool outputs back
-                    self.history.append(types.Content(role="user", parts=function_responses))
+                    self.history.append(
+                        types.Content(role="user", parts=function_responses)
+                    )
                 else:
                     # No tool calls, this is the final answer or a question
                     try:

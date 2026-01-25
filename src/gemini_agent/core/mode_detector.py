@@ -77,7 +77,9 @@ class ModeDetector:
         """
         prompt_lower = prompt.lower()
 
-        web_score = sum(1 for keyword in self.WEB_SEARCH_KEYWORDS if keyword in prompt_lower)
+        web_score = sum(
+            1 for keyword in self.WEB_SEARCH_KEYWORDS if keyword in prompt_lower
+        )
 
         # If user explicitly enabled grounding, use it for web-ish queries
         if use_grounding and web_score > 0:

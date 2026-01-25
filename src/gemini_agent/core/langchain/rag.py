@@ -9,6 +9,7 @@ from langchain_community.document_loaders import (
     DirectoryLoader,
 )
 
+
 class LangChainRAG:
     def __init__(
         self,
@@ -62,5 +63,5 @@ class LangChainRAG:
                 )
             else:
                 return []
-        
+
         return self.vectorstore.similarity_search(query_text, k=k)

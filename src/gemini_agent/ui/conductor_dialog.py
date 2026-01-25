@@ -39,7 +39,9 @@ class ConductorDialog(QDialog):
         header_lbl.setStyleSheet("font-size: 18px; font-weight: bold;")
         layout.addWidget(header_lbl)
 
-        description = QLabel("Manage project orchestration files and execute specialized commands.")
+        description = QLabel(
+            "Manage project orchestration files and execute specialized commands."
+        )
         description.setStyleSheet("color: #888; margin-bottom: 10px;")
         layout.addWidget(description)
 
@@ -125,7 +127,9 @@ class ConductorDialog(QDialog):
                 except Exception as e:
                     edit.setText(f"Error loading {filename}: {e}")
             else:
-                edit.setText(f"# {filename}\n\nFile not found. Click 'Generate Templates' or 'Save' to create it.")
+                edit.setText(
+                    f"# {filename}\n\nFile not found. Click 'Generate Templates' or 'Save' to create it."
+                )
 
     def save_files(self):
         """Saves the current content of the text edits to conductor files."""
@@ -144,7 +148,9 @@ class ConductorDialog(QDialog):
                 file_path = conductor_dir / filename
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(content)
-            QMessageBox.information(self, "Success", "Conductor files saved successfully.")
+            QMessageBox.information(
+                self, "Success", "Conductor files saved successfully."
+            )
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save files: {e}")
 
@@ -156,11 +162,20 @@ class ConductorDialog(QDialog):
             "workflow.md": "# Development Workflow\n\n## Branching Strategy\nMain branch for production.\n\n## Testing\nRun `pytest` before committing.",
         }
 
-        if not self.product_edit.toPlainText() or "File not found" in self.product_edit.toPlainText():
+        if (
+            not self.product_edit.toPlainText()
+            or "File not found" in self.product_edit.toPlainText()
+        ):
             self.product_edit.setText(templates["product.md"])
-        if not self.tech_stack_edit.toPlainText() or "File not found" in self.tech_stack_edit.toPlainText():
+        if (
+            not self.tech_stack_edit.toPlainText()
+            or "File not found" in self.tech_stack_edit.toPlainText()
+        ):
             self.tech_stack_edit.setText(templates["tech-stack.md"])
-        if not self.workflow_edit.toPlainText() or "File not found" in self.workflow_edit.toPlainText():
+        if (
+            not self.workflow_edit.toPlainText()
+            or "File not found" in self.workflow_edit.toPlainText()
+        ):
             self.workflow_edit.setText(templates["workflow.md"])
 
     def run_selected_command(self):

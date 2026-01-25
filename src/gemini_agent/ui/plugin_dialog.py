@@ -16,7 +16,9 @@ from gemini_agent.core.extension_manager import ExtensionManager
 
 
 class PluginDialog(QDialog):
-    def __init__(self, extension_manager: ExtensionManager, parent=None, theme_mode="Dark"):
+    def __init__(
+        self, extension_manager: ExtensionManager, parent=None, theme_mode="Dark"
+    ):
         super().__init__(parent)
         self.extension_manager = extension_manager
         self.theme_mode = theme_mode

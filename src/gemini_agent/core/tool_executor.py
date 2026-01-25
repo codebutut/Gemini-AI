@@ -19,7 +19,9 @@ class ToolExecutor:
         self,
         status_callback: Callable[[str], None],
         terminal_callback: Callable[[str, str], None],
-        confirmation_callback: Callable[[str, dict[str, Any]], tuple[bool, dict[str, Any] | None]],
+        confirmation_callback: Callable[
+            [str, dict[str, Any]], tuple[bool, dict[str, Any] | None]
+        ],
         extension_manager: ExtensionManager | None = None,
     ):
         self.status_callback = status_callback
@@ -76,9 +78,13 @@ class ToolExecutor:
                 return str(result)
             elif self.extension_manager:
                 try:
-                    result = self.extension_manager.execute_plugin_tool(fn_name, fn_args)
+                    result = self.extension_manager.execute_plugin_tool(
+                        fn_name, fn_args
+                    )
                     self.status_callback(f"✅ Completed (Plugin): {fn_name}")
-                    self.terminal_callback(f"✅ {fn_name} (Plugin) completed.\n", "success")
+                    self.terminal_callback(
+                        f"✅ {fn_name} (Plugin) completed.\n", "success"
+                    )
                     return str(result)
                 except ValueError:
                     return f"Error: Tool '{fn_name}' not found."
@@ -129,11 +135,19 @@ class ToolExecutor:
         if filepath == "plan.md":
             self.status_callback("📖 Reading virtual plan.md")
             with self._lock:
-                return self.current_plan if self.current_plan else "plan.md is currently empty."
+                return (
+                    self.current_plan
+                    if self.current_plan
+                    else "plan.md is currently empty."
+                )
         if filepath == "specs.md":
             self.status_callback("📖 Reading virtual specs.md")
             with self._lock:
-                return self.current_specs if self.current_specs else "specs.md is currently empty."
+                return (
+                    self.current_specs
+                    if self.current_specs
+                    else "specs.md is currently empty."
+                )
 
         # Fallback to real file read
         return str(tools.read_file(**fn_args))
@@ -151,7 +165,9 @@ class ToolExecutor:
             with self._lock:
                 self.current_specs = content
             self.status_callback("✅ Specifications updated (via write_file)")
-            self.terminal_callback("📝 Specifications updated (via write_file)\n", "success")
+            self.terminal_callback(
+                "📝 Specifications updated (via write_file)\n", "success"
+            )
             return "Successfully updated specs.md in session context."
 
         # Fallback to real file write
@@ -166,7 +182,9 @@ class ToolExecutor:
         name = fn_args.get("name")
 
         self.status_callback(f"⚙️ Managing Extension: {operation} {name}...")
-        self.terminal_callback(f"⚙️ Extension Op: {operation} {ext_type} {name}\n", "info")
+        self.terminal_callback(
+            f"⚙️ Extension Op: {operation} {ext_type} {name}\n", "info"
+        )
 
         if operation == "list":
             return json.dumps(self.extension_manager.list_extensions(), indent=2)
@@ -177,15 +195,22 @@ class ToolExecutor:
             elif operation == "uninstall":
                 return self.extension_manager.uninstall_plugin(name)
             elif operation == "configure":
-                return self.extension_manager.configure_plugin(name, fn_args.get("key"), fn_args.get("value"))
+                return self.extension_manager.configure_plugin(
+                    name, fn_args.get("key"), fn_args.get("value")
+                )
         elif ext_type == "mcp":
             if operation == "add_mcp":
                 return self.extension_manager.add_mcp_server(
-                    name, fn_args.get("command"), fn_args.get("args"), fn_args.get("env")
+                    name,
+                    fn_args.get("command"),
+                    fn_args.get("args"),
+                    fn_args.get("env"),
                 )
             elif operation == "remove_mcp":
                 return self.extension_manager.remove_mcp_server(name)
             elif operation == "configure":
-                return self.extension_manager.configure_mcp_server(name, fn_args.get("key"), fn_args.get("value"))
+                return self.extension_manager.configure_mcp_server(
+                    name, fn_args.get("key"), fn_args.get("value")
+                )
 
         return f"Error: Unsupported operation '{operation}' for extension type '{ext_type}'."

@@ -106,7 +106,9 @@ class DeepReviewDialog(QDialog):
             self.args["code"] = new_content
 
         # Re-run analysis on new content
-        self.review_engine.analyze_code(new_content)  # Just to refresh internal state if needed
+        self.review_engine.analyze_code(
+            new_content
+        )  # Just to refresh internal state if needed
 
         # Visual feedback
         self.btn_save.setText("Saved ✓")
@@ -241,7 +243,9 @@ class DeepReviewDialog(QDialog):
                 existing_content = f"Error reading file: {e}"
 
         # 4. Generate Diff
-        diff_html = self.review_engine.generate_diff_html(existing_content, content, self.theme_mode)
+        diff_html = self.review_engine.generate_diff_html(
+            existing_content, content, self.theme_mode
+        )
         self.diff_viewer.setHtml(diff_html)
 
         # 5. Set Source View
@@ -262,7 +266,9 @@ class DeepReviewDialog(QDialog):
             elif ext == ".sh":
                 lang = "bash"
 
-        self.highlighter = GeminiHighlighter(self.source_viewer.document(), lang, self.theme_mode)
+        self.highlighter = GeminiHighlighter(
+            self.source_viewer.document(), lang, self.theme_mode
+        )
         self.source_viewer.setPlainText(content)
 
         # 6. Run Analysis
@@ -270,7 +276,9 @@ class DeepReviewDialog(QDialog):
         security_risks = self.review_engine.scan_security(content)
 
         if not issues and not security_risks:
-            self.analysis_list.addItem("✅ No syntax errors or obvious security risks found.")
+            self.analysis_list.addItem(
+                "✅ No syntax errors or obvious security risks found."
+            )
         else:
             # Add Security Risks first (higher priority)
             for risk in security_risks:

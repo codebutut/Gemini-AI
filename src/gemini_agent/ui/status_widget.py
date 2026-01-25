@@ -49,7 +49,9 @@ class StatusWidget(QWidget):
         rate_layout.setSpacing(8)
 
         self.rate_limit_label = QLabel("RPM: -/-")
-        self.rate_limit_label.setStyleSheet("color: #aaa; font-size: 11px; font-family: 'Segoe UI', sans-serif;")
+        self.rate_limit_label.setStyleSheet(
+            "color: #aaa; font-size: 11px; font-family: 'Segoe UI', sans-serif;"
+        )
 
         self.rate_limit_bar = QProgressBar()
         self.rate_limit_bar.setFixedSize(120, 10)

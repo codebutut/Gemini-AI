@@ -95,5 +95,7 @@ def auto_generate_declaration(func: Callable) -> types.FunctionDeclaration:
     return types.FunctionDeclaration(
         name=func.__name__,
         description=doc_lines[0] if doc_lines else "No description",
-        parameters=types.Schema(type=types.Type.OBJECT, properties=properties, required=required),
+        parameters=types.Schema(
+            type=types.Type.OBJECT, properties=properties, required=required
+        ),
     )

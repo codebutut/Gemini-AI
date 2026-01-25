@@ -9,26 +9,35 @@ import pyperclip
 from pydantic import BaseModel, Field
 from . import tool, validate_args
 
+
 class CodeArgs(BaseModel):
     code: str = Field(..., description="The Python code snippet to execute.")
+
 
 class StartAppArgs(BaseModel):
     app_path: str = Field(..., description="Path to the application executable.")
     args: list[str] | None = Field(None, description="Command line arguments.")
-    wait: bool = Field(False, description="Whether to wait for the application to complete.")
+    wait: bool = Field(
+        False, description="Whether to wait for the application to complete."
+    )
+
 
 class KillProcessArgs(BaseModel):
     process_name: str = Field(..., description="Name or PID of process to kill.")
     force: bool = Field(False, description="Force kill if process doesn't respond.")
 
+
 class CommandArgs(BaseModel):
     command: str = Field(..., description="The shell command to execute.")
+
 
 class ClipboardArgs(BaseModel):
     text: str = Field(..., description="The text to set to the clipboard.")
 
+
 class ProcessDetailsArgs(BaseModel):
     pid: int = Field(..., description="The PID of the process.")
+
 
 @tool
 @validate_args(CodeArgs)
@@ -45,7 +54,13 @@ def run_python(code: str) -> str:
     """
     try:
         # Performance: Use stdin instead of temporary file to reduce I/O overhead
-        result = subprocess.run([sys.executable, "-"], input=code, capture_output=True, text=True, timeout=30)
+        result = subprocess.run(
+            [sys.executable, "-"],
+            input=code,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
 
         output = ""
         if result.stdout:
@@ -59,9 +74,12 @@ def run_python(code: str) -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 
+
 @tool
 @validate_args(StartAppArgs)
-def start_application(app_path: str, args: list[str] | None = None, wait: bool = False) -> str:
+def start_application(
+    app_path: str, args: list[str] | None = None, wait: bool = False
+) -> str:
     """
     Starts a local application.
 
@@ -89,7 +107,9 @@ def start_application(app_path: str, args: list[str] | None = None, wait: bool =
                 output.append(f"STDOUT:\n{result.stdout}")
             if result.stderr:
                 output.append(f"STDERR:\n{result.stderr}")
-            return f"Application completed with code {result.returncode}\n" + "\n".join(output)
+            return f"Application completed with code {result.returncode}\n" + "\n".join(
+                output
+            )
         else:
             if platform.system() == "Windows":
                 subprocess.Popen(cmd, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
@@ -98,6 +118,7 @@ def start_application(app_path: str, args: list[str] | None = None, wait: bool =
             return f"Application started in background: {app_path}"
     except subprocess.TimeoutExpired:
         return "Error: Application execution timed out (300s limit)."
+
 
 @tool
 @validate_args(KillProcessArgs)
@@ -142,6 +163,7 @@ def kill_process(process_name: str, force: bool = False) -> str:
     except Exception as e:
         return f"Error killing process: {str(e)}"
 
+
 @tool
 def list_processes() -> str:
     """
@@ -152,7 +174,9 @@ def list_processes() -> str:
     """
     try:
         processes = []
-        for proc in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"]):
+        for proc in psutil.process_iter(
+            ["pid", "name", "cpu_percent", "memory_percent"]
+        ):
             try:
                 info = proc.info
                 processes.append(
@@ -163,6 +187,7 @@ def list_processes() -> str:
         return "\n".join(processes[:50])
     except Exception as e:
         return f"Error listing processes: {str(e)}"
+
 
 @tool
 @validate_args(CommandArgs)
@@ -178,7 +203,9 @@ def execute_command(command: str) -> str:
         str: Command output or error message.
     """
     try:
-        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60)
+        result = subprocess.run(
+            command, shell=True, capture_output=True, text=True, timeout=60
+        )
         output = []
         if result.stdout:
             output.append(f"STDOUT:\n{result.stdout}")
@@ -189,6 +216,7 @@ def execute_command(command: str) -> str:
         return "Error: Command execution timed out (60s limit)."
     except Exception as e:
         return f"Error executing command: {str(e)}"
+
 
 @tool
 def get_clipboard() -> str:
@@ -202,6 +230,7 @@ def get_clipboard() -> str:
         return pyperclip.paste()
     except Exception as e:
         return f"Error reading clipboard: {str(e)}"
+
 
 @tool
 @validate_args(ClipboardArgs)
@@ -221,6 +250,7 @@ def set_clipboard(text: str) -> str:
     except Exception as e:
         return f"Error setting clipboard: {str(e)}"
 
+
 @tool
 @validate_args(ProcessDetailsArgs)
 def get_process_details(pid: int) -> str:
@@ -236,8 +266,19 @@ def get_process_details(pid: int) -> str:
     try:
         proc = psutil.Process(pid)
         with proc.oneshot():
-            info = proc.as_dict(attrs=['pid', 'name', 'status', 'cpu_percent', 'memory_info', 'create_time', 'cmdline', 'username'])
-            
+            info = proc.as_dict(
+                attrs=[
+                    "pid",
+                    "name",
+                    "status",
+                    "cpu_percent",
+                    "memory_info",
+                    "create_time",
+                    "cmdline",
+                    "username",
+                ]
+            )
+
         details = [
             f"PID: {info['pid']}",
             f"Name: {info['name']}",
@@ -245,16 +286,16 @@ def get_process_details(pid: int) -> str:
             f"CPU Usage: {info['cpu_percent']}%",
             f"Memory: {info['memory_info'].rss / 1024 / 1024:.2f} MB (RSS)",
             f"User: {info['username']}",
-            f"Command: {' '.join(info['cmdline']) if info['cmdline'] else 'N/A'}"
+            f"Command: {' '.join(info['cmdline']) if info['cmdline'] else 'N/A'}",
         ]
-        
+
         try:
             connections = proc.connections()
             if connections:
                 details.append(f"Connections: {len(connections)}")
         except:
             pass
-            
+
         return "\n".join(details)
     except psutil.NoSuchProcess:
         return f"Error: Process with PID {pid} not found."

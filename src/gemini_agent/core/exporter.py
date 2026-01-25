@@ -95,7 +95,9 @@ class Exporter:
             with zipfile.ZipFile(backup_path, "w", zipfile.ZIP_DEFLATED) as zipf:
                 # Save the raw JSON
                 data = {sid: s.model_dump() for sid, s in sessions.items()}
-                zipf.writestr("history.json", json.dumps(data, indent=4, ensure_ascii=False))
+                zipf.writestr(
+                    "history.json", json.dumps(data, indent=4, ensure_ascii=False)
+                )
 
                 # Save individual markdown files for convenience
                 for session_id, session in sessions.items():

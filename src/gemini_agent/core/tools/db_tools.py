@@ -6,11 +6,12 @@ from gemini_agent.core.tools import tool
 
 logger = get_logger(__name__)
 
+
 @tool
 def query_database(connection_string: str, query: str) -> str:
     """
     Executes a SQL query against a database and returns the results as a formatted string.
-    
+
     Args:
         connection_string: SQLAlchemy connection string (e.g., 'sqlite:///example.db').
         query: The SQL query to execute.
@@ -24,6 +25,7 @@ def query_database(connection_string: str, query: str) -> str:
         logger.error(f"Database query failed: {e}")
         return f"Error: {e}"
 
+
 @tool
 def list_database_tables(connection_string: str) -> List[str]:
     """
@@ -36,6 +38,7 @@ def list_database_tables(connection_string: str) -> List[str]:
     except Exception as e:
         logger.error(f"Failed to list tables: {e}")
         return [f"Error: {e}"]
+
 
 @tool
 def get_database_schema(connection_string: str, table_name: str) -> str:

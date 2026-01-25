@@ -33,7 +33,9 @@ class MCPClientManager:
             all_tools.extend(tools)
         return all_tools
 
-    async def call_external_tool(self, server_name: str, tool_name: str, arguments: dict[str, Any]) -> Any:
+    async def call_external_tool(
+        self, server_name: str, tool_name: str, arguments: dict[str, Any]
+    ) -> Any:
         """Calls a tool on a specific external MCP server."""
         if server_name in self.sessions:
             return await self.sessions[server_name].call_tool(tool_name, arguments)

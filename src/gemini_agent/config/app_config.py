@@ -76,7 +76,7 @@ class ModelRegistry:
             "context_window": 2_000_000,
             "supports_thinking": True,
             "is_flash": True,
-            "description": "Next-gen high-speed multimodal model."
+            "description": "Next-gen high-speed multimodal model.",
         },
         "gemini-3-pro-preview": {
             "rate_limit_requests": 50,
@@ -99,7 +99,7 @@ class ModelRegistry:
             "context_window": 1_000_000,
             "supports_thinking": False,
             "is_flash": False,
-        }
+        },
     }
 
     DEFAULT_MODEL_ID = "gemini-3-flash-preview"
@@ -177,7 +177,9 @@ class AppConfig:
             try:
                 return self.SYSTEM_INSTRUCTION_FILE.read_text(encoding="utf-8")
             except OSError as e:
-                logging.error(f"Failed to load system instruction from {self.SYSTEM_INSTRUCTION_FILE}: {e}")
+                logging.error(
+                    f"Failed to load system instruction from {self.SYSTEM_INSTRUCTION_FILE}: {e}"
+                )
 
         return "You are a helpful AI assistant."
 
@@ -201,7 +203,9 @@ class AppConfig:
         if sync:
             self._save_sync(config_copy)
         else:
-            threading.Thread(target=self._save_sync, args=(config_copy,), daemon=True).start()
+            threading.Thread(
+                target=self._save_sync, args=(config_copy,), daemon=True
+            ).start()
 
     def _save_sync(self, config_data: dict[str, Any]) -> None:
         with self._lock:

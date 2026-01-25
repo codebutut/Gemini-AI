@@ -128,16 +128,22 @@ class ThemeManager:
 
     def get_bubble_style(self, is_user: bool) -> str:
         """Returns the CSS style for chat bubbles based on the current theme."""
-        if self.current_theme == "Dark":
+        return self.get_bubble_style_static(self.current_theme, is_user)
+
+    @staticmethod
+    def get_bubble_style_static(theme_mode: str, is_user: bool) -> str:
+        """Returns the CSS style for chat bubbles based on the provided theme mode."""
+        # Reduced padding for a more compact look
+        if theme_mode == "Dark":
             if is_user:
-                return "background-color: #3C4043; border-radius: 20px; padding: 15px; color: #E3E3E3;"
+                return "background-color: #2D2E30; border: 1px solid #4CAF50; border-radius: 12px; padding: 6px 12px; color: #E3E3E3;"
             else:
-                return "background-color: transparent; border: none; padding: 0px;"
+                return "background-color: #1E1F20; border: 1px solid #2196F3; border-radius: 12px; padding: 8px 16px; color: #E3E3E3;"
         else:
             if is_user:
-                return "background-color: #F0F4F9; border-radius: 20px; padding: 15px; color: #1F1F1F;"
+                return "background-color: #E8F5E9; border: 1px solid #4CAF50; border-radius: 12px; padding: 6px 12px; color: #1F1F1F;"
             else:
-                return "background-color: transparent; border: none; padding: 0px;"
+                return "background-color: #E3F2FD; border: 1px solid #2196F3; border-radius: 12px; padding: 8px 16px; color: #1F1F1F;"
 
     def get_text_color(self) -> str:
         return "#E3E3E3" if self.current_theme == "Dark" else "#1F1F1F"

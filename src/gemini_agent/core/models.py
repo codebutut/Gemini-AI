@@ -33,6 +33,7 @@ class Session(BaseModel):
     def model_dump(self, **kwargs) -> Dict[str, Any]:
         return super().model_dump(**kwargs)
 
+
 class ToolCall(BaseModel):
     call_id: str = Field(default_factory=lambda: str(datetime.now().timestamp()))
     agent_name: str
@@ -42,20 +43,25 @@ class ToolCall(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
     success: bool = True
 
+
 class AgentState(BaseModel):
     agent_name: str
     session_id: str
     history: List[Dict[str, Any]] = Field(default_factory=list)
     updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
+
 class UserProfile(BaseModel):
     user_id: str = "default_user"
-    preferences: Dict[str, Any] = Field(default_factory=lambda: {
-        "verbosity": "normal",
-        "coding_style": "PEP8",
-        "preferred_language": "Python"
-    })
+    preferences: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "verbosity": "normal",
+            "coding_style": "PEP8",
+            "preferred_language": "Python",
+        }
+    )
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
 
 class ExecutionContext(BaseModel):
     task_id: str
@@ -64,11 +70,13 @@ class ExecutionContext(BaseModel):
     status: str = "idle"
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
+
 class ReflectionResult(BaseModel):
     is_satisfactory: bool
     critique: str
     suggestions: List[str] = Field(default_factory=list)
-    score: float = 0.0 # 0.0 to 1.0
+    score: float = 0.0  # 0.0 to 1.0
+
 
 class TaskStatus(str, Enum):
     PENDING = "pending"
@@ -76,6 +84,7 @@ class TaskStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     BLOCKED = "blocked"
+
 
 class Task(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -87,6 +96,7 @@ class Task(BaseModel):
     result: Optional[str] = None
     error: Optional[str] = None
 
+
 class Plan(BaseModel):
     goal: str
     tasks: List[Task] = Field(default_factory=list)
@@ -94,25 +104,37 @@ class Plan(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
+
 # --- Hierarchical Memory Models ---
+
 
 class WorkingMemory(BaseModel):
     """Volatile memory for the current turn."""
+
     active_task: Optional[str] = None
     intermediate_steps: List[Dict[str, Any]] = Field(default_factory=list)
     current_tool_state: Dict[str, Any] = Field(default_factory=dict)
 
+
 class EpisodicMemory(BaseModel):
     """Persistent record of experiences."""
+
     session_id: str
-    events: List[Dict[str, Any]] = Field(default_factory=list) # Messages, tool calls, reflections
+    events: List[Dict[str, Any]] = Field(
+        default_factory=list
+    )  # Messages, tool calls, reflections
     summary: Optional[str] = None
+
 
 class SemanticMemory(BaseModel):
     """Persistent general knowledge."""
-    learned_patterns: Dict[str, int] = Field(default_factory=dict) # Pattern -> Frequency
+
+    learned_patterns: Dict[str, int] = Field(
+        default_factory=dict
+    )  # Pattern -> Frequency
     entities: List[str] = Field(default_factory=list)
     user_preferences: Dict[str, Any] = Field(default_factory=dict)
+
 
 class ToolExpertise(BaseModel):
     tool_name: str
@@ -121,7 +143,11 @@ class ToolExpertise(BaseModel):
     avg_execution_time: float = 0.0
     common_errors: List[str] = Field(default_factory=list)
 
+
 class ProceduralMemory(BaseModel):
     """Persistent 'how-to' knowledge."""
+
     tool_expertise: Dict[str, ToolExpertise] = Field(default_factory=dict)
-    workflow_templates: Dict[str, Plan] = Field(default_factory=dict) # Goal -> Successful Plan
+    workflow_templates: Dict[str, Plan] = Field(
+        default_factory=dict
+    )  # Goal -> Successful Plan

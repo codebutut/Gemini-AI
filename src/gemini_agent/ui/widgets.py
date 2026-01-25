@@ -2,7 +2,10 @@ import os
 import re
 from typing import Any
 
+import qtawesome as qta
 from markdown_it import MarkdownIt
+from mdit_py_plugins.texmath import texmath_plugin
+from mdit_py_plugins.tasklists import tasklists_plugin
 
 # Pygments imports for Syntax Highlighting
 from pygments import lex
@@ -16,7 +19,6 @@ from PyQt6.QtGui import (
     QTextCharFormat,
     QTextCursor,
     QTextDocument,
-    QPalette,
 )
 from PyQt6.QtWidgets import (
     QApplication,
@@ -32,9 +34,15 @@ from PyQt6.QtWidgets import (
 )
 
 from gemini_agent.ui.styles import SYNTAX_COLORS
+from gemini_agent.ui.theme_manager import ThemeManager
 
-# Shared MarkdownIt instance - Enabled 'table' extension manually to avoid linkify dependency
-MD_PARSER = MarkdownIt("commonmark", {"breaks": True, "html": True}).enable("table")
+# Shared MarkdownIt instance with plugins
+MD_PARSER = (
+    MarkdownIt("commonmark", {"breaks": True, "html": True})
+    .enable("table")
+    .use(texmath_plugin)
+    .use(tasklists_plugin)
+)
 
 
 class AttachmentItem(QFrame):
@@ -77,14 +85,23 @@ class AttachmentItem(QFrame):
         layout.setSpacing(5)
 
         name = os.path.basename(self.file_path)
+
+        # Add file icon
+        icon_lbl = QLabel()
+        icon_lbl.setPixmap(qta.icon("fa5s.file", color=fg).pixmap(12, 12))
+        layout.addWidget(icon_lbl)
+
         lbl = QLabel(name)
         lbl.setToolTip(self.file_path)
+        layout.addWidget(lbl)
 
-        btn_remove = QPushButton("×")
+        btn_remove = QPushButton()
+        btn_remove.setIcon(qta.icon("fa5s.times-circle", color=fg))
+        btn_remove.setIconSize(QSize(14, 14))
         btn_remove.setFixedSize(16, 16)
+        btn_remove.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_remove.clicked.connect(lambda: self.remove_requested.emit(self.file_path))
 
-        layout.addWidget(lbl)
         layout.addWidget(btn_remove)
 
 
@@ -93,7 +110,9 @@ class GeminiHighlighter(QSyntaxHighlighter):
     A Qt Syntax Highlighter that uses Pygments to tokenize code.
     """
 
-    def __init__(self, document: QTextDocument, language: str, theme_mode: str = "Dark"):
+    def __init__(
+        self, document: QTextDocument, language: str, theme_mode: str = "Dark"
+    ):
         super().__init__(document)
         self.theme_mode = theme_mode
         self.styles = SYNTAX_COLORS.get(theme_mode, SYNTAX_COLORS["Dark"])
@@ -172,8 +191,8 @@ class CodeBlock(QFrame):
                 background-color: {bg_color}; 
                 border-radius: 6px; 
                 border: 1px solid {border_color}; 
-                margin-top: 8px; 
-                margin-bottom: 8px; 
+                margin-top: 4px; 
+                margin-bottom: 4px; 
             }}
         """)
 
@@ -193,21 +212,27 @@ class CodeBlock(QFrame):
             }}
         """)
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(10, 5, 10, 5)
+        header_layout.setContentsMargins(10, 4, 10, 4)
 
         lang_lbl = QLabel(self.language.upper())
         lang_lbl.setStyleSheet(
-            f"color: {'#aaa' if self.theme_mode == 'Dark' else '#57606a'}; font-weight: bold; font-size: 11px; font-family: 'Segoe UI', sans-serif;"
+            f"color: {'#aaa' if self.theme_mode == 'Dark' else '#57606a'}; font-weight: bold; font-size: 10px; font-family: 'Segoe UI', sans-serif;"
         )
 
-        copy_btn = QPushButton("Copy")
+        copy_btn = QPushButton(" Copy")
+        copy_btn.setIcon(
+            qta.icon(
+                "fa5s.copy", color="#aaa" if self.theme_mode == "Dark" else "#57606a"
+            )
+        )
+        copy_btn.setIconSize(QSize(10, 10))
         copy_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         copy_btn.setStyleSheet(f"""
             QPushButton {{
                 background: transparent; 
                 color: {"#aaa" if self.theme_mode == "Dark" else "#57606a"}; 
                 border: none; 
-                font-size: 11px;
+                font-size: 10px;
             }}
             QPushButton:hover {{ color: {"#fff" if self.theme_mode == "Dark" else "#0969da"}; }}
         """)
@@ -241,13 +266,15 @@ class CodeBlock(QFrame):
         self.editor.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.editor.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
 
-        self.highlighter = GeminiHighlighter(self.editor.document(), self.language, self.theme_mode)
+        self.highlighter = GeminiHighlighter(
+            self.editor.document(), self.language, self.theme_mode
+        )
 
         layout.addWidget(self.editor)
-        
+
         # Connect document changes to height adjustment
         self.editor.document().contentsChanged.connect(self.adjust_height)
-        
+
         # Use a timer to adjust height after the widget is laid out
         QTimer.singleShot(50, self.adjust_height)
 
@@ -255,27 +282,23 @@ class CodeBlock(QFrame):
         """Adjusts the height of the code block based on its content and width."""
         doc = self.editor.document()
         # Set document width to match editor width for accurate height calculation with wrapping
-        # We use viewport width to account for any internal padding/margins
         width = self.editor.viewport().width()
         if width <= 0:
-            # Fallback to current width or a reasonable default if not yet rendered
             width = self.editor.width() if self.editor.width() > 0 else 500
-            
+
         doc.setTextWidth(width)
-        
+
         doc_height = doc.size().height()
-        # Header (~35px) + document height + padding/margins
-        # We add a bit extra (15px) to ensure no vertical scrollbar appears
-        new_height = int(doc_height) + 50
-        
-        # Apply height constraints
-        self.setFixedHeight(min(max(new_height, 80), 1000))
+        # Header (~25px) + document height + padding/margins
+        new_height = int(doc_height) + 40
+
+        # Apply height constraints - Reduced minimum height from 80 to 50
+        self.setFixedHeight(min(max(new_height, 50), 1000))
         self.updateGeometry()
 
     def resizeEvent(self, event):
         """Handle resize events to re-calculate height if text wraps."""
         super().resizeEvent(event)
-        # Use a small delay to ensure the viewport width is updated
         QTimer.singleShot(10, self.adjust_height)
 
     def copy_code(self):
@@ -283,9 +306,13 @@ class CodeBlock(QFrame):
         clipboard.setText(self.code)
         btn = self.findChild(QPushButton)
         if btn:
-            original = btn.text()
-            btn.setText("Copied!")
-            QTimer.singleShot(1500, lambda: btn.setText(original))
+            original_text = btn.text()
+            original_icon = btn.icon()
+            btn.setText(" Copied!")
+            btn.setIcon(qta.icon("fa5s.check", color="#50fa7b"))
+            QTimer.singleShot(
+                1500, lambda: (btn.setText(original_text), btn.setIcon(original_icon))
+            )
 
 
 class MessageBubble(QFrame):
@@ -303,26 +330,15 @@ class MessageBubble(QFrame):
     def initUI(self):
         self.setObjectName("UserBubble" if self.is_user else "AIBubble")
 
-        # Apply bubble style based on theme
-        if self.theme_mode == "Dark":
-            if self.is_user:
-                self.setStyleSheet("background-color: #3C4043; border-radius: 20px; padding: 15px; color: #E3E3E3;")
-            else:
-                self.setStyleSheet("background-color: transparent; border: none; padding: 0px;")
-        else:
-            if self.is_user:
-                self.setStyleSheet("background-color: #F0F4F9; border-radius: 20px; padding: 15px; color: #1F1F1F;")
-            else:
-                self.setStyleSheet("background-color: transparent; border: none; padding: 0px;")
+        # Apply bubble style using ThemeManager's centralized logic
+        self.setStyleSheet(
+            ThemeManager.get_bubble_style_static(self.theme_mode, self.is_user)
+        )
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(
-            15 if self.is_user else 0,
-            10 if self.is_user else 0,
-            15 if self.is_user else 0,
-            10 if self.is_user else 0,
-        )
-        layout.setSpacing(10)
+        # Reduced margins from (10, 10, 10, 10) to (8, 4, 8, 4)
+        layout.setContentsMargins(8, 4, 8, 4)
+        layout.setSpacing(8)
 
         # Use shared parser
         tokens = MD_PARSER.parse(self.raw_text)
@@ -348,7 +364,7 @@ class MessageBubble(QFrame):
 
         if not self.is_user:
             self._add_toolbar(layout)
-            
+
         # Ensure the bubble can grow and doesn't get squashed
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
 
@@ -362,12 +378,16 @@ class MessageBubble(QFrame):
         lbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         lbl.setOpenExternalLinks(True)
-        
-        # Crucial for ensuring QLabel doesn't get squashed and provides correct size hint
-        lbl.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+
+        # Changed from MinimumExpanding to Preferred to avoid excessive vertical growth
+        lbl.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
+        )
 
         text_color = "#E3E3E3" if self.theme_mode == "Dark" else "#1F1F1F"
-        lbl.setStyleSheet(f"color: {text_color}; border: none; font-size: 16px; background: transparent;")
+        lbl.setStyleSheet(
+            f"color: {text_color}; border: none; font-size: 15px; background: transparent;"
+        )
 
         layout.addWidget(lbl)
 
@@ -380,16 +400,16 @@ class MessageBubble(QFrame):
     def _add_toolbar(self, layout: QVBoxLayout) -> None:
         """Adds a toolbar with Copy Plain Text and Copy Markdown buttons."""
         toolbar = QHBoxLayout()
-        toolbar.setContentsMargins(0, 5, 0, 5)
-        toolbar.setSpacing(10)
+        toolbar.setContentsMargins(0, 2, 0, 2)
+        toolbar.setSpacing(8)
         toolbar.addStretch()
 
         btn_style = """
             QPushButton {
                 border: none;
                 color: #888;
-                font-size: 11px;
-                padding: 4px 8px;
+                font-size: 10px;
+                padding: 2px 6px;
                 background-color: transparent;
             }
             QPushButton:hover { 
@@ -399,12 +419,16 @@ class MessageBubble(QFrame):
             }
         """
 
-        copy_plain_btn = QPushButton("Copy Plain Text")
+        copy_plain_btn = QPushButton(" Copy Plain Text")
+        copy_plain_btn.setIcon(qta.icon("fa5s.file-alt", color="#888"))
+        copy_plain_btn.setIconSize(QSize(10, 10))
         copy_plain_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         copy_plain_btn.setStyleSheet(btn_style)
         copy_plain_btn.clicked.connect(lambda: self.copy_plain_text(copy_plain_btn))
 
-        copy_md_btn = QPushButton("Copy Markdown")
+        copy_md_btn = QPushButton(" Copy Markdown")
+        copy_md_btn.setIcon(qta.icon("fa5b.markdown", color="#888"))
+        copy_md_btn.setIconSize(QSize(12, 12))
         copy_md_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         copy_md_btn.setStyleSheet(btn_style)
         copy_md_btn.clicked.connect(lambda: self.copy_markdown(copy_md_btn))
@@ -419,7 +443,10 @@ class MessageBubble(QFrame):
             # Use shared parser for rendering
             html = MD_PARSER.render(text)
             link_color = "#4da6ff" if self.theme_mode == "Dark" else "#0969da"
-            html = html.replace("<a href=", f'<a style="color: {link_color}; text-decoration: none;" href=')
+            html = html.replace(
+                "<a href=",
+                f'<a style="color: {link_color}; text-decoration: none;" href=',
+            )
 
             if "<table>" in html:
                 border_color = "#555555" if self.theme_mode == "Dark" else "#dddddd"
@@ -463,8 +490,12 @@ class MessageBubble(QFrame):
     def _show_copied_feedback(self, btn: QPushButton) -> None:
         """Temporarily changes button text to provide visual feedback."""
         original_text = btn.text()
-        btn.setText("Copied!")
-        QTimer.singleShot(1500, lambda: btn.setText(original_text))
+        original_icon = btn.icon()
+        btn.setText(" Copied!")
+        btn.setIcon(qta.icon("fa5s.check", color="#50fa7b"))
+        QTimer.singleShot(
+            1500, lambda: (btn.setText(original_text), btn.setIcon(original_icon))
+        )
 
 
 class AutoResizingTextEdit(QTextEdit):
@@ -539,12 +570,16 @@ class AutoResizingTextEdit(QTextEdit):
             event.ignore()
             return
 
-        if event.key() == Qt.Key.Key_Return and not (event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
+        if event.key() == Qt.Key.Key_Return and not (
+            event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+        ):
             self.returnPressed.emit()
             return
 
         # Trigger completer
-        is_shortcut = (event.modifiers() & Qt.KeyboardModifier.ControlModifier) and event.key() == Qt.Key.Key_E
+        is_shortcut = (
+            event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        ) and event.key() == Qt.Key.Key_E
 
         super().keyPressEvent(event)
 
@@ -557,7 +592,9 @@ class AutoResizingTextEdit(QTextEdit):
 
         if self._completer and completion_prefix != self._completer.completionPrefix():
             self._completer.setCompletionPrefix(completion_prefix)
-            self._completer.popup().setCurrentIndex(self._completer.completionModel().index(0, 0))
+            self._completer.popup().setCurrentIndex(
+                self._completer.completionModel().index(0, 0)
+            )
 
         cr = self.cursorRect()
         cr.setWidth(

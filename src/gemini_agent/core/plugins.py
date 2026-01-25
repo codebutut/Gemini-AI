@@ -28,7 +28,9 @@ class Plugin:
 
     def execute_tool(self, tool_name: str, args: dict[str, Any]) -> Any:
         """Execute a tool provided by this plugin."""
-        raise NotImplementedError("Plugins must implement execute_tool if they provide tools.")
+        raise NotImplementedError(
+            "Plugins must implement execute_tool if they provide tools."
+        )
 
     def load_config(self, config_path: str):
         """Load configuration from a JSON file."""
@@ -76,10 +78,16 @@ class PluginManager:
                 spec.loader.exec_module(module)
 
                 for _name, obj in inspect.getmembers(module):
-                    if inspect.isclass(obj) and issubclass(obj, Plugin) and obj is not Plugin:
+                    if (
+                        inspect.isclass(obj)
+                        and issubclass(obj, Plugin)
+                        and obj is not Plugin
+                    ):
                         plugin_instance = obj()
                         plugin_instance.filepath = filepath
-                        config_path = os.path.join(self.config_dir, f"{plugin_instance.name}.json")
+                        config_path = os.path.join(
+                            self.config_dir, f"{plugin_instance.name}.json"
+                        )
                         plugin_instance.load_config(config_path)
                         self.plugins[plugin_instance.name] = plugin_instance
                         self.logger.info(f"Loaded plugin: {plugin_instance.name}")
@@ -89,7 +97,9 @@ class PluginManager:
     def install_plugin(self, package_name: str):
         """Install a plugin from PyPI."""
         try:
-            subprocess.check_call(["pip", "install", "-t", self.plugins_dir, package_name])
+            subprocess.check_call(
+                ["pip", "install", "-t", self.plugins_dir, package_name]
+            )
             self.logger.info(f"Installed plugin: {package_name}")
             self.discover_plugins()
         except subprocess.CalledProcessError as e:

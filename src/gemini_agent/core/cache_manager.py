@@ -8,6 +8,7 @@ import diskcache
 
 logger = logging.getLogger(__name__)
 
+
 class CacheManager:
     """
     Unified caching system for embeddings, LLM responses, tool results, and state.
@@ -17,7 +18,7 @@ class CacheManager:
     def __init__(self, cache_dir: Path):
         self.cache_dir = cache_dir
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Initialize specialized caches
         self.embedding_cache = diskcache.Cache(str(self.cache_dir / "embeddings"))
         self.llm_cache = diskcache.Cache(str(self.cache_dir / "llm_responses"))
@@ -29,9 +30,9 @@ class CacheManager:
         hasher = hashlib.md5()
         for arg in args:
             if isinstance(arg, (dict, list)):
-                hasher.update(json.dumps(arg, sort_keys=True).encode('utf-8'))
+                hasher.update(json.dumps(arg, sort_keys=True).encode("utf-8"))
             else:
-                hasher.update(str(arg).encode('utf-8'))
+                hasher.update(str(arg).encode("utf-8"))
         return hasher.hexdigest()
 
     # --- Embedding Cache ---
@@ -48,7 +49,9 @@ class CacheManager:
         key = self._generate_key(prompt_data)
         return self.llm_cache.get(key)
 
-    def set_llm_response(self, prompt_data: Dict[str, Any], response: Any, expire: int = 3600):
+    def set_llm_response(
+        self, prompt_data: Dict[str, Any], response: Any, expire: int = 3600
+    ):
         key = self._generate_key(prompt_data)
         self.llm_cache.set(key, response, expire=expire)
 
@@ -57,7 +60,9 @@ class CacheManager:
         key = self._generate_key(tool_name, args)
         return self.tool_cache.get(key)
 
-    def set_tool_result(self, tool_name: str, args: Dict[str, Any], result: Any, expire: int = 300):
+    def set_tool_result(
+        self, tool_name: str, args: Dict[str, Any], result: Any, expire: int = 300
+    ):
         key = self._generate_key(tool_name, args)
         self.tool_cache.set(key, result, expire=expire)
 

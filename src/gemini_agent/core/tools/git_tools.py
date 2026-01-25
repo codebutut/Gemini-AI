@@ -2,9 +2,13 @@ import subprocess
 from pydantic import BaseModel, Field
 from . import tool, validate_args
 
+
 class GitArgs(BaseModel):
-    operation: str = Field(..., description="git command (clone, pull, commit, push, etc.).")
+    operation: str = Field(
+        ..., description="git command (clone, pull, commit, push, etc.)."
+    )
     args: list[str] | None = Field(None, description="Additional arguments.")
+
 
 @tool
 @validate_args(GitArgs)
@@ -29,6 +33,8 @@ def git_operation(operation: str, args: list[str] | None = None) -> str:
             output.append(f"STDOUT:\n{result.stdout}")
         if result.stderr:
             output.append(f"STDERR:\n{result.stderr}")
-        return f"Git {operation} completed with code {result.returncode}\n" + "\n".join(output)
+        return f"Git {operation} completed with code {result.returncode}\n" + "\n".join(
+            output
+        )
     except subprocess.TimeoutExpired:
         return f"Error: Git {operation} timed out (60s limit)."

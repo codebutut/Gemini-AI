@@ -35,7 +35,9 @@ class ReviewEngine:
     }
 
     @staticmethod
-    def generate_diff_html(old_content: str, new_content: str, theme_mode: str = "Dark") -> str:
+    def generate_diff_html(
+        old_content: str, new_content: str, theme_mode: str = "Dark"
+    ) -> str:
         """
         Generates a side-by-side or unified diff in HTML format using StringIO for efficiency.
         """
@@ -47,7 +49,9 @@ class ReviewEngine:
         old_lines = old_content.splitlines()
         new_lines = new_content.splitlines()
 
-        diff = difflib.unified_diff(old_lines, new_lines, fromfile="Current", tofile="Proposed", lineterm="")
+        diff = difflib.unified_diff(
+            old_lines, new_lines, fromfile="Current", tofile="Proposed", lineterm=""
+        )
 
         # Theme-aware colors
         if theme_mode == "Dark":
@@ -63,16 +67,24 @@ class ReviewEngine:
 
         # Use StringIO for efficient string building
         output = io.StringIO()
-        output.write(f"<pre style='font-family: monospace; white-space: pre; color: {default_fg};'>\n")
+        output.write(
+            f"<pre style='font-family: monospace; white-space: pre; color: {default_fg};'>\n"
+        )
 
         for line in diff:
             escaped_line = html.escape(line)
             if line.startswith("+"):
-                output.write(f"<div style='color: {add_fg}; background-color: {add_bg};'>{escaped_line}</div>\n")
+                output.write(
+                    f"<div style='color: {add_fg}; background-color: {add_bg};'>{escaped_line}</div>\n"
+                )
             elif line.startswith("-"):
-                output.write(f"<div style='color: {rem_fg}; background-color: {rem_bg};'>{escaped_line}</div>\n")
+                output.write(
+                    f"<div style='color: {rem_fg}; background-color: {rem_bg};'>{escaped_line}</div>\n"
+                )
             elif line.startswith("@@"):
-                output.write(f"<div style='color: {info_fg}; font-weight: bold;'>{escaped_line}</div>\n")
+                output.write(
+                    f"<div style='color: {info_fg}; font-weight: bold;'>{escaped_line}</div>\n"
+                )
             elif line.startswith("^"):
                 output.write(f"<div style='color: {info_fg};'>{escaped_line}</div>\n")
             else:
@@ -122,7 +134,9 @@ class ReviewEngine:
             # Fallback to pylint if ruff is not installed (requires temp file)
             tmp_path = None
             try:
-                with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp:
+                with tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".py", delete=False
+                ) as tmp:
                     tmp.write(code)
                     tmp_path = tmp.name
 
@@ -144,7 +158,10 @@ class ReviewEngine:
 
                 if result.stdout:
                     for line in result.stdout.splitlines():
-                        if not line.startswith("************* Module") and tmp_path in line:
+                        if (
+                            not line.startswith("************* Module")
+                            and tmp_path in line
+                        ):
                             clean_line = line.replace(tmp_path, "code.py")
                             issues.append(f"LINT (pylint): {clean_line}")
             except Exception as e:

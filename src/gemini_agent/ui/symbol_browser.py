@@ -1,4 +1,5 @@
-from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
+import qtawesome as qta
+from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QSize
 from PyQt6.QtWidgets import (
     QLineEdit,
     QPushButton,
@@ -57,7 +58,9 @@ class SymbolBrowser(QWidget):
         layout.addWidget(self.tree)
 
         # Refresh Button
-        self.btn_refresh = QPushButton("Refresh Index")
+        self.btn_refresh = QPushButton(" Refresh Index")
+        self.btn_refresh.setIcon(qta.icon("fa5s.sync-alt", color="#eeeeee"))
+        self.btn_refresh.setIconSize(QSize(14, 14))
         self.btn_refresh.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_refresh.setStyleSheet("""
             QPushButton {
@@ -93,6 +96,7 @@ class SymbolBrowser(QWidget):
         for file_path, file_symbols in files.items():
             file_item = QTreeWidgetItem([file_path])
             file_item.setData(0, Qt.ItemDataRole.UserRole, "file")
+            file_item.setIcon(0, qta.icon("fa5s.file-code", color="#A0A0A0"))
             self.tree.addTopLevelItem(file_item)
 
             # Group by class if applicable
@@ -112,24 +116,38 @@ class SymbolBrowser(QWidget):
 
             for class_name, data in classes.items():
                 # Find the class symbol itself if it exists in this file
-                class_symbol = next((s for s in data["symbols"] if s.kind == "class" and s.name == class_name), None)
+                class_symbol = next(
+                    (
+                        s
+                        for s in data["symbols"]
+                        if s.kind == "class" and s.name == class_name
+                    ),
+                    None,
+                )
 
                 class_item = QTreeWidgetItem([f"class {class_name}"])
                 class_item.setData(0, Qt.ItemDataRole.UserRole, class_symbol)
+                class_item.setIcon(0, qta.icon("fa5s.cube", color="#8be9fd"))
                 file_item.addChild(class_item)
 
                 for s in data["symbols"]:
                     if s.kind != "class":
-                        icon = "ƒ" if s.kind == "function" else "m"
-                        item = QTreeWidgetItem([f"{icon} {s.name}"])
+                        icon_name = (
+                            "fa5s.terminal" if s.kind == "function" else "fa5s.box"
+                        )
+                        icon_color = "#50fa7b" if s.kind == "function" else "#bd93f9"
+                        item = QTreeWidgetItem([s.name])
+                        item.setIcon(0, qta.icon(icon_name, color=icon_color))
                         item.setData(0, Qt.ItemDataRole.UserRole, s)
                         class_item.addChild(item)
 
                 class_item.setExpanded(True)
 
             for s in standalone:
-                icon = "ƒ" if s.kind == "function" else "m"
-                item = QTreeWidgetItem([f"{icon} {s.name}"])
+                icon_name = "fa5s.terminal" if s.kind == "function" else "fa5s.box"
+                icon_color = "#50fa7b" if s.kind == "function" else "#bd93f9"
+                item = QTreeWidgetItem([s.name])
+                item.setIcon(0, qta.icon(icon_name, color=icon_color))
                 item.setData(0, Qt.ItemDataRole.UserRole, s)
                 file_item.addChild(item)
 

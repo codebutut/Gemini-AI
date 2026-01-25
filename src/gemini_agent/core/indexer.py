@@ -3,6 +3,7 @@ import functools
 import logging
 import os
 import sqlite3
+import threading
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
@@ -123,8 +124,22 @@ class Indexer:
         self.root_dir = root_dir
         self.symbols: list[Symbol] = []
         self.name_map: dict[str, list[Symbol]] = {}
-        self.trigram_index: dict[str, set[int]] = defaultdict(set)  # trigram -> set of symbol indices
+        self.trigram_index: dict[str, set[int]] = defaultdict(
+            set
+        )  # trigram -> set of symbol indices
+        self._stop_event = threading.Event()
+        self._executor: ProcessPoolExecutor | None = None
         self.load_cache()
+
+    def shutdown(self) -> None:
+        """Signals the indexer to stop and shuts down the executor."""
+        logger.info("Shutting down Indexer...")
+        self._stop_event.set()
+        if self._executor:
+            try:
+                self._executor.shutdown(wait=False, cancel_futures=True)
+            except Exception as e:
+                logger.error(f"Error shutting down indexer executor: {e}")
 
     def _get_cache_path(self) -> str:
         """Returns the path to the persistent SQLite cache file."""
@@ -164,7 +179,9 @@ class Indexer:
             self._init_db(conn)
             cursor = conn.cursor()
 
-            cursor.execute("SELECT name, kind, line, file_path, docstring, parent FROM symbols")
+            cursor.execute(
+                "SELECT name, kind, line, file_path, docstring, parent FROM symbols"
+            )
             rows = cursor.fetchall()
 
             self.symbols = []
@@ -201,6 +218,9 @@ class Indexer:
 
     def index_project(self) -> None:
         """Recursively scans the project directory for Python files and indexes symbols in parallel."""
+        if self._stop_event.is_set():
+            return
+
         cache_path = self._get_cache_path()
         conn = sqlite3.connect(cache_path)
         self._init_db(conn)
@@ -214,8 +234,15 @@ class Indexer:
         current_files = set()
 
         for root, dirs, files in os.walk(self.root_dir):
+            if self._stop_event.is_set():
+                conn.close()
+                return
+
             dirs[:] = [
-                d for d in dirs if not d.startswith(".") and d not in ("env", "venv", "__pycache__", "node_modules")
+                d
+                for d in dirs
+                if not d.startswith(".")
+                and d not in ("env", "venv", "__pycache__", "node_modules")
             ]
             for file in files:
                 if file.endswith(".py"):
@@ -229,11 +256,25 @@ class Indexer:
                         continue
 
         # Parallel indexing for new/changed files
-        if files_to_index:
+        if files_to_index and not self._stop_event.is_set():
             logger.info(f"Indexing {len(files_to_index)} files in parallel...")
             worker_func = functools.partial(_index_file_worker, root_dir=self.root_dir)
-            with ProcessPoolExecutor() as executor:
-                results = list(executor.map(worker_func, files_to_index))
+
+            self._executor = ProcessPoolExecutor()
+            try:
+                results = list(self._executor.map(worker_func, files_to_index))
+            except Exception as e:
+                if not self._stop_event.is_set():
+                    logger.error(f"Error during parallel indexing: {e}")
+                results = []
+            finally:
+                if self._executor:
+                    self._executor.shutdown(wait=True)
+                    self._executor = None
+
+            if self._stop_event.is_set():
+                conn.close()
+                return
 
             for res in results:
                 if res:
@@ -264,16 +305,21 @@ class Indexer:
             conn.commit()
 
         # Clean up deleted files
-        deleted_files = set(db_files.keys()) - current_files
-        if deleted_files:
-            for path in deleted_files:
-                cursor.execute("DELETE FROM files WHERE path = ?", (path,))
-                cursor.execute("DELETE FROM symbols WHERE file_path = ?", (path,))
-            conn.commit()
+        if not self._stop_event.is_set():
+            deleted_files = set(db_files.keys()) - current_files
+            if deleted_files:
+                for path in deleted_files:
+                    cursor.execute("DELETE FROM files WHERE path = ?", (path,))
+                    cursor.execute("DELETE FROM symbols WHERE file_path = ?", (path,))
+                conn.commit()
 
-        if files_to_index or deleted_files:
+        if (
+            files_to_index or (locals().get("deleted_files") and deleted_files)
+        ) and not self._stop_event.is_set():
             # Reload everything into memory if changes occurred
-            cursor.execute("SELECT name, kind, line, file_path, docstring, parent FROM symbols")
+            cursor.execute(
+                "SELECT name, kind, line, file_path, docstring, parent FROM symbols"
+            )
             rows = cursor.fetchall()
             self.symbols = []
             self.name_map = {}
@@ -322,7 +368,11 @@ class Indexer:
             return []
 
         # Final verification (filter out false positives from trigram intersection)
-        return [self.symbols[idx] for idx in potential_indices if query in self.symbols[idx].name.lower()]
+        return [
+            self.symbols[idx]
+            for idx in potential_indices
+            if query in self.symbols[idx].name.lower()
+        ]
 
     def get_all_symbols(self) -> list[Symbol]:
         """Returns all indexed symbols."""

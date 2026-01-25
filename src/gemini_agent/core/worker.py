@@ -95,7 +95,12 @@ class GeminiWorker(QObject):
     def cancel(self):
         self._is_cancelled = True
 
-    def confirm_tool(self, confirmation_id: str, allowed: bool, modified_args: dict[str, Any] | None = None) -> None:
+    def confirm_tool(
+        self,
+        confirmation_id: str,
+        allowed: bool,
+        modified_args: dict[str, Any] | None = None,
+    ) -> None:
         """Called by the UI thread to provide confirmation result."""
         if self._current_confirmation_id == confirmation_id:
             self._confirmation_result = allowed
@@ -129,7 +134,9 @@ class GeminiWorker(QObject):
         await self._confirmation_event.wait()
         return self._confirmation_result, self._confirmation_modified_args
 
-    def _create_config(self, tools_config: types.Tool | None = None) -> types.GenerateContentConfig:
+    def _create_config(
+        self, tools_config: types.Tool | None = None
+    ) -> types.GenerateContentConfig:
         config_args = {
             "temperature": self.config.temperature,
             "top_p": self.config.top_p,
@@ -146,13 +153,17 @@ class GeminiWorker(QObject):
         if self.config.thinking_enabled and supports_thinking:
             try:
                 if hasattr(types, "ThinkingConfig"):
-                    config_args["thinking_config"] = types.ThinkingConfig(include_thoughts=True)
+                    config_args["thinking_config"] = types.ThinkingConfig(
+                        include_thoughts=True
+                    )
                 if self.config.thinking_budget > 0:
                     config_args["max_output_tokens"] = self.config.thinking_budget
             except Exception as e:
                 self.log.warning(f"Failed to configure thinking: {e}")
         elif self.config.thinking_enabled and not supports_thinking:
-            self.log.warning(f"Thinking enabled but model {self.config.model} does not support it. Ignoring.")
+            self.log.warning(
+                f"Thinking enabled but model {self.config.model} does not support it. Ignoring."
+            )
 
         return types.GenerateContentConfig(**config_args)
 
@@ -170,8 +181,12 @@ class GeminiWorker(QObject):
             loop = asyncio.get_running_loop()
             self._loop = loop
 
-            def sync_confirmation_callback(fn_name: str, fn_args: dict[str, Any]) -> tuple[bool, dict[str, Any] | None]:
-                future = asyncio.run_coroutine_threadsafe(self._request_tool_confirmation(fn_name, fn_args), loop)
+            def sync_confirmation_callback(
+                fn_name: str, fn_args: dict[str, Any]
+            ) -> tuple[bool, dict[str, Any] | None]:
+                future = asyncio.run_coroutine_threadsafe(
+                    self._request_tool_confirmation(fn_name, fn_args), loop
+                )
                 return future.result()
 
             self.tool_executor = ToolExecutor(
@@ -192,7 +207,9 @@ class GeminiWorker(QObject):
                 return
 
             # 1. Prepare History
-            gemini_contents = self.context_manager.prepare_history(self.config.history_context)
+            gemini_contents = self.context_manager.prepare_history(
+                self.config.history_context
+            )
 
             # 2. Prepare Current Turn Content
             current_turn_parts = self.context_manager.prepare_current_turn(
@@ -204,7 +221,9 @@ class GeminiWorker(QObject):
             gemini_contents.append(types.Content(role="user", parts=current_turn_parts))
 
             # 3. Detect mode
-            mode = self.mode_detector.detect_mode(self.config.prompt, self.config.use_grounding)
+            mode = self.mode_detector.detect_mode(
+                self.config.prompt, self.config.use_grounding
+            )
             self.log.info(f"Using mode: {mode}")
 
             # 4. Execute
@@ -220,75 +239,93 @@ class GeminiWorker(QObject):
 
     async def _run_with_mas(self) -> None:
         from gemini_agent.core.mas.orchestrator import MultiAgentOrchestrator
-        
+
         self.status_update.emit("🤖 Initializing Multi-Agent System...")
         self.terminal_output.emit("🤖 Multi-Agent System (MAS) Mode Active\n", "info")
-        
+
         orchestrator = MultiAgentOrchestrator(
-            api_key=self.config.api_key,
-            model=self.config.model
+            api_key=self.config.api_key, model=self.config.model
         )
-        
+
         # Bridge EventBus to PyQt signals
         async def event_bridge(event: AgentEvent):
             if event.event_type == "agent.started":
                 self.status_update.emit(f"🤖 {event.agent_name} started...")
             elif event.event_type == "tool.called":
-                self.status_update.emit(f"🛠️ {event.agent_name} calling {event.data.get('tool')}...")
-                self.terminal_output.emit(f"🛠️ [{event.agent_name}] Executing {event.data.get('tool')}({event.data.get('args')})\n", "info")
+                self.status_update.emit(
+                    f"🛠️ {event.agent_name} calling {event.data.get('tool')}..."
+                )
+                self.terminal_output.emit(
+                    f"🛠️ [{event.agent_name}] Executing {event.data.get('tool')}({event.data.get('args')})\n",
+                    "info",
+                )
             elif event.event_type == "tool.result":
                 status = "✅" if event.data.get("success") else "❌"
-                self.terminal_output.emit(f"{status} [{event.agent_name}] Result: {str(event.data.get('result'))[:200]}...\n", "success" if event.data.get("success") else "error")
+                self.terminal_output.emit(
+                    f"{status} [{event.agent_name}] Result: {str(event.data.get('result'))[:200]}...\n",
+                    "success" if event.data.get("success") else "error",
+                )
             elif event.event_type == "agent.thought":
-                self.terminal_output.emit(f"💭 [{event.agent_name}] {event.data.get('thought')}\n", "thought")
+                self.terminal_output.emit(
+                    f"💭 [{event.agent_name}] {event.data.get('thought')}\n", "thought"
+                )
             elif event.event_type == "agent.error":
-                self.terminal_output.emit(f"❌ [{event.agent_name}] Error: {event.data.get('error')}\n", "error")
+                self.terminal_output.emit(
+                    f"❌ [{event.agent_name}] Error: {event.data.get('error')}\n",
+                    "error",
+                )
             elif event.event_type == "task.finished":
                 self.status_update.emit("✅ Task completed.")
 
         await orchestrator.event_bus.subscribe_all(event_bridge)
-        
+
         try:
             # Pass session_id to orchestrator for state management
-            result = await orchestrator.run(self.config.prompt, session_id=self.config.session_id)
+            result = await orchestrator.run(
+                self.config.prompt, session_id=self.config.session_id
+            )
             self.finished.emit(result)
         except Exception as e:
             self._handle_run_error(e)
 
     async def _run_with_langchain(self) -> None:
         from gemini_agent.core.langchain.agent import LangChainAgent
-        
+
         self.status_update.emit("🚀 Initializing LangChain Agent...")
-        
+
         agent = LangChainAgent(
             api_key=self.config.api_key,
             model_name=self.config.model,
             system_instruction=self.config.system_instruction,
             status_signal=self.status_update,
-            terminal_signal=self.terminal_output
+            terminal_signal=self.terminal_output,
         )
-        
+
         # Load history into memory
         for msg in self.config.history_context:
             if msg["role"] == "user":
                 agent.memory.chat_history.add_user_message(msg["text"])
             else:
                 agent.memory.chat_history.add_ai_message(msg["text"])
-        
+
         try:
             result = await agent.run(self.config.prompt)
             self.finished.emit(result)
         except Exception as e:
             self._handle_run_error(e)
 
-    async def _run_grounding_mode(self, client: genai.Client, gemini_contents: list[types.Content]) -> None:
+    async def _run_grounding_mode(
+        self, client: genai.Client, gemini_contents: list[types.Content]
+    ) -> None:
         self.status_update.emit("🔍 Searching the web...")
 
         await self.rate_limiter.acquire_async()
         if self._is_cancelled:
             return
 
-        config = self._create_config(tools_config=types.Tool(google_search=types.GoogleSearch()))
+        config = self._create_config(
+            tools_config=types.Tool(google_search=types.GoogleSearch())
+        )
 
         try:
             response = await client.aio.models.generate_content(
@@ -308,7 +345,9 @@ class GeminiWorker(QObject):
 
         except Exception as api_error:
             if "Tool use with function calling is unsupported" in str(api_error):
-                self.status_update.emit("⚠️ Web search not available, using local tools...")
+                self.status_update.emit(
+                    "⚠️ Web search not available, using local tools..."
+                )
                 await self._handle_function_calls(client, gemini_contents)
             else:
                 raise api_error
@@ -327,7 +366,9 @@ class GeminiWorker(QObject):
             limit = self.rate_limiter.max_requests
 
             # Attempt to extract real-time telemetry from response headers if available
-            if hasattr(response, "_response") and hasattr(response._response, "headers"):
+            if hasattr(response, "_response") and hasattr(
+                response._response, "headers"
+            ):
                 headers = response._response.headers
                 # Gemini API headers for rate limits (RPM)
                 # Note: These header names might vary slightly depending on the specific API endpoint
@@ -348,24 +389,40 @@ class GeminiWorker(QObject):
         self.log.error(f"Worker Error: {error_str}", exc_info=True)
         if "ResourceExhausted" in error_str or "429" in error_str:
             self.error.emit(f"Rate limit exceeded. Please wait. Details: {e}")
-        elif "GoogleAuthError" in error_str or "401" in error_str or "Unauthenticated" in error_str:
+        elif (
+            "GoogleAuthError" in error_str
+            or "401" in error_str
+            or "Unauthenticated" in error_str
+        ):
             self.error.emit(f"Authentication error. Check API key. Details: {e}")
         else:
             self.error.emit(f"An unexpected error occurred: {e}")
 
-    async def _handle_function_calls(self, client: genai.Client, gemini_contents: list[types.Content]) -> None:
+    async def _handle_function_calls(
+        self, client: genai.Client, gemini_contents: list[types.Content]
+    ) -> None:
         final_response_text = ""
         loop_active = True
         turn_count = 0
         progress_metrics = []
         last_output = None
 
-        extra_tools = self.config.extension_manager.get_all_tools() if self.config.extension_manager else []
+        extra_tools = (
+            self.config.extension_manager.get_all_tools()
+            if self.config.extension_manager
+            else []
+        )
         tools_config = tools.get_tool_config(extra_declarations=extra_tools)
 
-        while loop_active and turn_count < self.config.max_turns and not self._is_cancelled:
+        while (
+            loop_active
+            and turn_count < self.config.max_turns
+            and not self._is_cancelled
+        ):
             turn_count += 1
-            self.status_update.emit(f"🔄 Thinking (Turn {turn_count}/{self.config.max_turns})...")
+            self.status_update.emit(
+                f"🔄 Thinking (Turn {turn_count}/{self.config.max_turns})..."
+            )
 
             await self.rate_limiter.acquire_async()
             if self._is_cancelled:
@@ -380,15 +437,19 @@ class GeminiWorker(QObject):
                     response = await client.aio.models.generate_content(
                         model=self.config.model, contents=gemini_contents, config=config
                     )
-                    break # Success, exit retry loop
+                    break  # Success, exit retry loop
                 except errors.ClientError as e:
                     if e.code == 429 and attempt < max_retries:
-                        self.log.warning(f"Rate limit hit (429). Retrying in {retry_delay}s... (Attempt {attempt+1}/{max_retries})")
-                        self.status_update.emit(f"⏳ Rate limit hit. Retrying in {retry_delay}s...")
+                        self.log.warning(
+                            f"Rate limit hit (429). Retrying in {retry_delay}s... (Attempt {attempt + 1}/{max_retries})"
+                        )
+                        self.status_update.emit(
+                            f"⏳ Rate limit hit. Retrying in {retry_delay}s..."
+                        )
                         await asyncio.sleep(retry_delay)
-                        retry_delay *= 2 # Exponential backoff
+                        retry_delay *= 2  # Exponential backoff
                         continue
-                    
+
                     # Not 429 or retries exhausted
                     self.log.error(f"API ClientError: {e.code} - {e.message}")
                     error_message = e.message or "Unknown API Error"
@@ -416,7 +477,11 @@ class GeminiWorker(QObject):
                 tasks = []
                 for fc in function_calls:
                     tasks.append(
-                        asyncio.to_thread(self.tool_executor.execute, fc.name, {k: v for k, v in fc.args.items()})
+                        asyncio.to_thread(
+                            self.tool_executor.execute,
+                            fc.name,
+                            {k: v for k, v in fc.args.items()},
+                        )
                     )
 
                 results = await asyncio.gather(*tasks)
@@ -430,40 +495,59 @@ class GeminiWorker(QObject):
                         self.plan_updated.emit(self.tool_executor.current_plan)
                     if (
                         fc.name in ["update_specs", "write_file"]
-                        and self.tool_executor.current_specs != self.config.initial_specs
+                        and self.tool_executor.current_specs
+                        != self.config.initial_specs
                     ):
                         self.specs_updated.emit(self.tool_executor.current_specs)
 
                     current_output = f"{fc.name}:{str(result)[:50]}"
-                    progress_metrics.append("progress_made" if current_output != last_output else "no_progress")
+                    progress_metrics.append(
+                        "progress_made"
+                        if current_output != last_output
+                        else "no_progress"
+                    )
                     last_output = current_output
 
                     # Safely handle result content to avoid API errors (400 Bad Request)
                     # Convert to string to ensure JSON serializability and truncate if excessive
                     safe_result = str(result)
-                    if len(safe_result) > 500000: # 500k char limit
+                    if len(safe_result) > 500000:  # 500k char limit
                         safe_result = safe_result[:500000] + "... [Output Truncated]"
 
                     function_responses.append(
-                        types.Part.from_function_response(name=fc.name, response={"result": safe_result})
+                        types.Part.from_function_response(
+                            name=fc.name, response={"result": safe_result}
+                        )
                     )
 
                 if self._is_stuck(progress_metrics):
-                    final_response_text = "[System: Agent stuck in repetitive loop. Process stopped.]"
+                    final_response_text = (
+                        "[System: Agent stuck in repetitive loop. Process stopped.]"
+                    )
                     loop_active = False
                 else:
-                    gemini_contents.append(types.Content(role="user", parts=function_responses))
-                    self.status_update.emit(f"🔄 Processing results (Turn {turn_count}/{self.config.max_turns})...")
+                    gemini_contents.append(
+                        types.Content(role="user", parts=function_responses)
+                    )
+                    self.status_update.emit(
+                        f"🔄 Processing results (Turn {turn_count}/{self.config.max_turns})..."
+                    )
             else:
                 try:
                     final_response_text = response.text or "(Task completed silently)"
                 except Exception:
-                    final_response_text = "(Task completed, but text response was unavailable)"
+                    final_response_text = (
+                        "(Task completed, but text response was unavailable)"
+                    )
                 loop_active = False
 
         if turn_count >= self.config.max_turns:
             max_turn_msg = f"[System: Max agent turns reached ({self.config.max_turns}). Process stopped.]"
-            final_response_text = f"{final_response_text}\n\n{max_turn_msg}" if final_response_text else max_turn_msg
+            final_response_text = (
+                f"{final_response_text}\n\n{max_turn_msg}"
+                if final_response_text
+                else max_turn_msg
+            )
 
         if not self._is_cancelled:
             self.finished.emit(final_response_text)
@@ -476,7 +560,9 @@ class GeminiWorker(QObject):
             or candidate.content.parts is None
         ):
             finish_reason = getattr(candidate, "finish_reason", "UNKNOWN")
-            error_msg = f"API returned an empty response (Finish Reason: {finish_reason})."
+            error_msg = (
+                f"API returned an empty response (Finish Reason: {finish_reason})."
+            )
             if finish_reason == "SAFETY":
                 error_msg = "Response blocked by safety filters."
             self.error.emit(error_msg)
@@ -484,7 +570,9 @@ class GeminiWorker(QObject):
         return True
 
     def _is_stuck(self, progress_metrics: list[str]) -> bool:
-        return len(progress_metrics) >= 3 and all(p == "no_progress" for p in progress_metrics[-3:])
+        return len(progress_metrics) >= 3 and all(
+            p == "no_progress" for p in progress_metrics[-3:]
+        )
 
 
 class GeminiWorkerThread(QThread):

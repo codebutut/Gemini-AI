@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from PyQt6.QtCore import Qt, pyqtSignal
+import qtawesome as qta
+from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -45,8 +46,10 @@ class Sidebar(QFrame):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
 
-        self.btn_new_chat = QPushButton(" +  New chat")
+        self.btn_new_chat = QPushButton(" New chat")
         self.btn_new_chat.setObjectName("BtnNewChat")
+        self.btn_new_chat.setIcon(qta.icon("fa5s.plus", color="#ffffff"))
+        self.btn_new_chat.setIconSize(QSize(14, 14))
         self.btn_new_chat.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_new_chat.clicked.connect(self.new_chat_requested.emit)
         layout.addWidget(self.btn_new_chat)
@@ -62,15 +65,19 @@ class Sidebar(QFrame):
         # Unified Recent Items Bubble
         self.recent_widget = RecentWidget()
         self.recent_widget.item_selected.connect(self._handle_item_selected)
-        
+
         # Expose the list widget for context menu and other operations
         self.chat_list = self.recent_widget.list_widget
         self.chat_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.chat_list.customContextMenuRequested.connect(self.context_menu_requested.emit)
-        
+        self.chat_list.customContextMenuRequested.connect(
+            self.context_menu_requested.emit
+        )
+
         layout.addWidget(self.recent_widget)
 
-    def populate_sessions(self, sessions: Dict[str, Session], current_session_id: Optional[str] = None) -> None:
+    def populate_sessions(
+        self, sessions: Dict[str, Session], current_session_id: Optional[str] = None
+    ) -> None:
         """
         Populates the sidebar with session items.
         """
@@ -96,18 +103,20 @@ class Sidebar(QFrame):
         for sess_id, session in self.sessions.items():
             if text and text not in session.title.lower():
                 continue
-            
+
             # Use last message timestamp or creation date
             last_activity = session.created_at
             if session.messages:
                 last_activity = session.messages[-1].timestamp
-                
-            combined_items.append({
-                "name": session.title,
-                "id": sess_id,
-                "type": "chat",
-                "timestamp": last_activity
-            })
+
+            combined_items.append(
+                {
+                    "name": session.title,
+                    "id": sess_id,
+                    "type": "chat",
+                    "timestamp": last_activity,
+                }
+            )
 
         # Add Recent Files/Folders
         for item in self.recent_items:
@@ -120,13 +129,17 @@ class Sidebar(QFrame):
 
         # Update the RecentWidget
         self.recent_widget.update_items(combined_items)
-        
+
         # Highlight current session
         if self.current_session_id:
             for i in range(self.chat_list.count()):
                 item = self.chat_list.item(i)
                 data = item.data(Qt.ItemDataRole.UserRole)
-                if data and data.get("type") == "chat" and data.get("id") == self.current_session_id:
+                if (
+                    data
+                    and data.get("type") == "chat"
+                    and data.get("id") == self.current_session_id
+                ):
                     self.chat_list.setCurrentItem(item)
                     break
 
@@ -166,7 +179,9 @@ class SidebarContainer(QFrame):
         self.tabs.setObjectName("SidebarTabs")
 
         self.chat_sidebar = Sidebar()
-        self.tabs.addTab(self.chat_sidebar, "💬 Chats")
+        self.tabs.addTab(
+            self.chat_sidebar, qta.icon("fa5s.comments", color="#888888"), " Chats"
+        )
 
         layout.addWidget(self.tabs)
 
@@ -189,7 +204,9 @@ class ChatHeader(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(15, 10, 20, 0)
 
-        self.btn_toggle_sidebar = QPushButton("≡")
+        self.btn_toggle_sidebar = QPushButton()
+        self.btn_toggle_sidebar.setIcon(qta.icon("fa5s.bars", color="#cccccc"))
+        self.btn_toggle_sidebar.setIconSize(QSize(20, 20))
         self.btn_toggle_sidebar.setFixedSize(40, 40)
         self.btn_toggle_sidebar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_toggle_sidebar.clicked.connect(self.toggle_sidebar_requested.emit)
@@ -202,24 +219,56 @@ class ChatHeader(QWidget):
 
         layout.addSpacing(15)
 
-        self.mode_indicator = QLabel("🔧 Local Tools")
+        self.mode_indicator = QLabel(" Local Tools")
         self.mode_indicator.setStyleSheet(
             "color: #0B57D0; font-size: 12px; padding: 4px 8px; background-color: rgba(11, 87, 208, 0.1); border-radius: 4px;"
         )
-        layout.addWidget(self.mode_indicator)
+        # We can't easily set an icon on a QLabel with text without using HTML or a layout
+        # But we can use a small icon label next to it or just use the icon in the text via HTML if supported,
+        # but qtawesome icons are QIcons.
+        # Let's use a layout for the mode indicator to include an icon.
+        self.mode_container = QFrame()
+        self.mode_layout = QHBoxLayout(self.mode_container)
+        self.mode_layout.setContentsMargins(8, 4, 8, 4)
+        self.mode_layout.setSpacing(5)
+
+        self.mode_icon = QLabel()
+        self.mode_icon.setPixmap(qta.icon("fa5s.tools", color="#0B57D0").pixmap(14, 14))
+        self.mode_text = QLabel("Local Tools")
+        self.mode_text.setStyleSheet(
+            "color: #0B57D0; font-size: 12px; font-weight: 500;"
+        )
+
+        self.mode_layout.addWidget(self.mode_icon)
+        self.mode_layout.addWidget(self.mode_text)
+        self.mode_container.setStyleSheet(
+            "background-color: rgba(11, 87, 208, 0.1); border-radius: 4px;"
+        )
+
+        layout.addWidget(self.mode_container)
+        # Hide the old mode_indicator
+        self.mode_indicator.hide()
 
         # Usage Label - Increased font size to 13px
         self.usage_label = QLabel("Usage: 0 tokens ($0.00)")
-        self.usage_label.setStyleSheet("color: #888; font-size: 13px; margin-left: 10px;")
+        self.usage_label.setStyleSheet(
+            "color: #888; font-size: 13px; margin-left: 10px;"
+        )
         layout.addWidget(self.usage_label)
 
         layout.addSpacing(20)
 
-        layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
+        layout.addSpacerItem(
+            QSpacerItem(
+                40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+            )
+        )
 
         # Terminal Toggle Button
-        self.btn_terminal = QPushButton("💻 Terminal")
+        self.btn_terminal = QPushButton(" Terminal")
         self.btn_terminal.setObjectName("BtnTerminal")
+        self.btn_terminal.setIcon(qta.icon("fa5s.terminal", color="#cccccc"))
+        self.btn_terminal.setIconSize(QSize(14, 14))
         self.btn_terminal.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_terminal.setCheckable(True)
         self.btn_terminal.setFixedHeight(32)
@@ -229,8 +278,10 @@ class ChatHeader(QWidget):
         layout.addSpacing(10)
 
         # Settings Button
-        self.btn_settings = QPushButton("⚙️ Settings")
+        self.btn_settings = QPushButton(" Settings")
         self.btn_settings.setObjectName("BtnSettings")
+        self.btn_settings.setIcon(qta.icon("fa5s.cog", color="#cccccc"))
+        self.btn_settings.setIconSize(QSize(14, 14))
         self.btn_settings.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_settings.setFixedHeight(32)
         self.btn_settings.setMinimumWidth(110)
@@ -242,18 +293,32 @@ class ChatHeader(QWidget):
         Updates the mode indicator (Web Search vs Local Tools).
         """
         if use_search:
-            self.mode_indicator.setText("🔍 Web Search")
-            self.mode_indicator.setStyleSheet(
-                "color: #ff9800; font-size: 12px; padding: 4px 8px; background-color: rgba(255, 152, 0, 0.1); border-radius: 4px;"
+            self.mode_text.setText("Web Search")
+            self.mode_icon.setPixmap(
+                qta.icon("fa5s.search", color="#ff9800").pixmap(14, 14)
+            )
+            self.mode_text.setStyleSheet(
+                "color: #ff9800; font-size: 12px; font-weight: 500;"
+            )
+            self.mode_container.setStyleSheet(
+                "background-color: rgba(255, 152, 0, 0.1); border-radius: 4px;"
             )
         else:
-            self.mode_indicator.setText("🔧 Local Tools")
-            self.mode_indicator.setStyleSheet(
-                "color: #0B57D0; font-size: 12px; padding: 4px 8px; background-color: rgba(11, 87, 208, 0.1); border-radius: 4px;"
+            self.mode_text.setText("Local Tools")
+            self.mode_icon.setPixmap(
+                qta.icon("fa5s.tools", color="#0B57D0").pixmap(14, 14)
+            )
+            self.mode_text.setStyleSheet(
+                "color: #0B57D0; font-size: 12px; font-weight: 500;"
+            )
+            self.mode_container.setStyleSheet(
+                "background-color: rgba(11, 87, 208, 0.1); border-radius: 4px;"
             )
 
     def update_usage(self, total_tokens: int, estimated_cost: float) -> None:
         """
         Updates the usage label with token count and cost.
         """
-        self.usage_label.setText(f"Usage: {total_tokens:,} tokens (${estimated_cost:.4f})")
+        self.usage_label.setText(
+            f"Usage: {total_tokens:,} tokens (${estimated_cost:.4f})"
+        )

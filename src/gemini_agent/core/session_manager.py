@@ -10,9 +10,10 @@ from typing import Any, Dict, Optional
 from pydantic import ValidationError
 from .models import Session, Message, Usage
 
+
 class SessionManager:
     """
-    Manages chat sessions using Pydantic models for data integrity and 
+    Manages chat sessions using Pydantic models for data integrity and
     thread-safe throttled persistence.
     """
 
@@ -68,7 +69,9 @@ class SessionManager:
         try:
             with self._lock:
                 # Convert models to dict for serialization
-                data = {sid: session.model_dump() for sid, session in self.sessions.items()}
+                data = {
+                    sid: session.model_dump() for sid, session in self.sessions.items()
+                }
                 data_str = json.dumps(data, indent=4, ensure_ascii=False)
                 self._last_save_time = time.time()
 
@@ -77,15 +80,20 @@ class SessionManager:
         except Exception as e:
             logging.error(f"Failed to save history: {e}")
 
-    def create_session(self, title: str = "New Chat", config: Optional[Dict[str, Any]] = None, sync: bool = False) -> str:
+    def create_session(
+        self,
+        title: str = "New Chat",
+        config: Optional[Dict[str, Any]] = None,
+        sync: bool = False,
+    ) -> str:
         """Creates a new session and returns its ID."""
         session_id = str(uuid.uuid4())
         session = Session(title=title, config=config or {})
-        
+
         with self._lock:
             self.sessions[session_id] = session
             self.current_session_id = session_id
-        
+
         self.save_history(sync=sync)
         return session_id
 
@@ -126,42 +134,54 @@ class SessionManager:
             session.messages.append(message)
         self.save_history(sync=sync)
 
-    def update_session_title(self, session_id: str, new_title: str, sync: bool = False) -> None:
+    def update_session_title(
+        self, session_id: str, new_title: str, sync: bool = False
+    ) -> None:
         """Updates the title of a session."""
         session = self.sessions.get(session_id)
         if session:
             session.title = new_title
             self.save_history(sync=sync)
 
-    def update_session_plan(self, session_id: str, plan: str, sync: bool = False) -> None:
+    def update_session_plan(
+        self, session_id: str, plan: str, sync: bool = False
+    ) -> None:
         """Updates the plan of a session."""
         session = self.sessions.get(session_id)
         if session:
             session.plan = plan
             self.save_history(sync=sync)
 
-    def update_session_specs(self, session_id: str, specs: str, sync: bool = False) -> None:
+    def update_session_specs(
+        self, session_id: str, specs: str, sync: bool = False
+    ) -> None:
         """Updates the specs of a session."""
         session = self.sessions.get(session_id)
         if session:
             session.specs = specs
             self.save_history(sync=sync)
 
-    def update_session_config(self, session_id: str, config: Dict[str, Any], sync: bool = False) -> None:
+    def update_session_config(
+        self, session_id: str, config: Dict[str, Any], sync: bool = False
+    ) -> None:
         """Updates the configuration overrides for a session."""
         session = self.sessions.get(session_id)
         if session:
             session.config.update(config)
             self.save_history(sync=sync)
 
-    def update_session_usage(self, session_id: str, input_tokens: int, output_tokens: int, sync: bool = False) -> None:
+    def update_session_usage(
+        self, session_id: str, input_tokens: int, output_tokens: int, sync: bool = False
+    ) -> None:
         """Updates the cumulative token usage for a session."""
         session = self.sessions.get(session_id)
         if session:
             with self._lock:
                 session.usage.input_tokens += input_tokens
                 session.usage.output_tokens += output_tokens
-                session.usage.total_tokens = session.usage.input_tokens + session.usage.output_tokens
+                session.usage.total_tokens = (
+                    session.usage.input_tokens + session.usage.output_tokens
+                )
             self.save_history(sync=sync)
 
     def clear_current_session(self, sync: bool = False) -> None:

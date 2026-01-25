@@ -1,5 +1,6 @@
 import os
 
+import qtawesome as qta
 from PyQt6.QtCore import QDir, Qt, pyqtSignal
 from PyQt6.QtGui import QAction, QFileSystemModel
 from PyQt6.QtWidgets import (
@@ -92,18 +93,23 @@ class ProjectExplorer(QWidget):
 
         menu = QMenu()
 
-        attach_action = QAction(f"📎 Attach {'Folder' if is_dir else 'File'}", self)
+        attach_icon = qta.icon("fa5s.paperclip", color="#888")
+        attach_action = QAction(
+            attach_icon, f" Attach {'Folder' if is_dir else 'File'}", self
+        )
         attach_action.triggered.connect(lambda: self.emit_attach(path, is_dir))
         menu.addAction(attach_action)
 
         if not is_dir:
-            open_action = QAction("📖 Open in Editor", self)
+            open_icon = qta.icon("fa5s.book-open", color="#888")
+            open_action = QAction(open_icon, " Open in Editor", self)
             open_action.triggered.connect(lambda: self.file_opened.emit(path))
             menu.addAction(open_action)
 
         menu.addSeparator()
 
-        copy_path_action = QAction("📋 Copy Path", self)
+        copy_icon = qta.icon("fa5s.copy", color="#888")
+        copy_path_action = QAction(copy_icon, " Copy Path", self)
         copy_path_action.triggered.connect(lambda: self.copy_to_clipboard(path))
         menu.addAction(copy_path_action)
 

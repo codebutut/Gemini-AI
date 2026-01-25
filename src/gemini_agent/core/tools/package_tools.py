@@ -3,10 +3,12 @@ import subprocess
 from pydantic import BaseModel, Field
 from . import tool, validate_args
 
+
 class InstallPackageArgs(BaseModel):
     package_name: str = Field(..., description="Name of package to install.")
     upgrade: bool = Field(False, description="Whether to upgrade if already installed.")
     dev: bool = Field(False, description="Whether to install dev dependencies.")
+
 
 @tool
 @validate_args(InstallPackageArgs)

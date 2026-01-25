@@ -5,21 +5,34 @@ from google.genai import types
 from pydantic import BaseModel, Field
 from . import tool, validate_args
 
+
 class GenerateImageArgs(BaseModel):
     prompt: str = Field(..., description="Text description of the image to generate.")
-    aspect_ratio: str | None = Field("1:1", description="Aspect ratio (1:1, 4:3, 16:9).")
-    output_file: str | None = Field(None, description="Path to save the generated image.")
+    aspect_ratio: str | None = Field(
+        "1:1", description="Aspect ratio (1:1, 4:3, 16:9)."
+    )
+    output_file: str | None = Field(
+        None, description="Path to save the generated image."
+    )
+
 
 class AnalyzeImageArgs(BaseModel):
     image_path: str = Field(..., description="Path to the image file to analyze.")
-    prompt: str = Field("Describe this image in detail.", description="Question or instruction for analysis.")
+    prompt: str = Field(
+        "Describe this image in detail.",
+        description="Question or instruction for analysis.",
+    )
+
 
 class CaptureScreenArgs(BaseModel):
     output_file: str | None = Field(None, description="Path to save the screenshot.")
 
+
 @tool
 @validate_args(GenerateImageArgs)
-def generate_image(prompt: str, aspect_ratio: str = "1:1", output_file: str | None = None) -> str:
+def generate_image(
+    prompt: str, aspect_ratio: str = "1:1", output_file: str | None = None
+) -> str:
     """
     Generates an image based on a text prompt using Imagen 3.
 
@@ -68,9 +81,12 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1", output_file: str | No
     except Exception as e:
         return f"Error generating image: {str(e)}"
 
+
 @tool
 @validate_args(AnalyzeImageArgs)
-def analyze_image(image_path: str, prompt: str = "Describe this image in detail.") -> str:
+def analyze_image(
+    image_path: str, prompt: str = "Describe this image in detail."
+) -> str:
     """
     Analyzes an image file and returns a description or answers questions about it.
 
@@ -109,7 +125,10 @@ def analyze_image(image_path: str, prompt: str = "Describe this image in detail.
                 types.Content(
                     role="user",
                     parts=[
-                        types.Part.from_uri(file_uri=uploaded_file.uri, mime_type=uploaded_file.mime_type),
+                        types.Part.from_uri(
+                            file_uri=uploaded_file.uri,
+                            mime_type=uploaded_file.mime_type,
+                        ),
                         types.Part.from_text(text=prompt),
                     ],
                 )
@@ -119,6 +138,7 @@ def analyze_image(image_path: str, prompt: str = "Describe this image in detail.
         return response.text
     except Exception as e:
         return f"Error analyzing image: {str(e)}"
+
 
 @tool
 @validate_args(CaptureScreenArgs)
@@ -134,14 +154,16 @@ def capture_screen(output_file: str | None = None) -> str:
     """
     try:
         import pyautogui
+
         if not output_file:
             output_file = f"screenshot_{int(time.time())}.png"
-        
+
         screenshot = pyautogui.screenshot()
         screenshot.save(output_file)
         return f"Successfully captured screen and saved to '{output_file}'."
     except Exception as e:
         return f"Error capturing screen: {str(e)}"
+
 
 @tool
 @validate_args(AnalyzeImageArgs)
@@ -158,18 +180,18 @@ def analyze_screen(prompt: str = "Describe what is currently on the screen.") ->
     try:
         output_file = f"temp_screen_{int(time.time())}.png"
         capture_result = capture_screen(output_file)
-        
+
         if capture_result.startswith("Error"):
             return capture_result
-            
+
         analysis_result = analyze_image(output_file, prompt)
-        
+
         # Clean up temp file
         try:
             os.remove(output_file)
         except:
             pass
-            
+
         return analysis_result
     except Exception as e:
         return f"Error analyzing screen: {str(e)}"

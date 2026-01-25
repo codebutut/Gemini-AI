@@ -16,7 +16,11 @@ def load_plugin_class(filepath: str):
         # We need to be careful here because we don't have the base Plugin class in this process
         # unless we import it.
         for name, obj in inspect.getmembers(module):
-            if inspect.isclass(obj) and name != "Plugin" and hasattr(obj, "execute_tool"):
+            if (
+                inspect.isclass(obj)
+                and name != "Plugin"
+                and hasattr(obj, "execute_tool")
+            ):
                 return obj
     return None
 

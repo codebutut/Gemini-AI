@@ -1,96 +1,149 @@
-# Gemini AI Agent 
+# Gemini AI Agent
 
-A powerful, extensible, and professional-grade AI Agent application built with Python 3.10+ and PyQt6. This application integrates Google's Gemini AI models with a comprehensive suite of tools, a Multi-Agent System (MAS), and Model Context Protocol (MCP) support to provide a robust environment for automation, coding assistance, and data analysis.
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Status](https://img.shields.io/badge/Status-Active-success)
+![PyQt6](https://img.shields.io/badge/GUI-PyQt6-orange)
+
+**Gemini AI Agent** is a professional-grade, autonomous desktop assistant powered by Google's Gemini models. Built with Python and PyQt6, it combines a modern, fluent interface with advanced capabilities like Multi-Agent Systems (MAS), Model Context Protocol (MCP), and deep local system integration.
+
+---
+
+## 📋 Table of Contents
+- [Features](#-features)
+- [Installation](#-installation)
+- [Configuration](#-configuration)
+- [Usage](#-usage)
+- [Architecture](#-architecture)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+---
 
 ## 🚀 Features
 
-### 🖥️ Modern GUI
-- **Intuitive Chat Interface**: Clean and responsive chat UI with Markdown support and syntax highlighting.
-- **Sidebar Management**: Easily manage multiple chat sessions, view recent files, and explore project structures.
-- **Project Explorer**: Integrated file browser to quickly attach files or folders to the AI context.
-- **Symbol Browser**: Deep indexing of Python projects to find and reference classes, functions, and variables.
-- **Terminal Integration**: Built-in terminal to monitor tool execution and system output.
-- **Theme Support**: Fully customizable Dark and Light modes.
+### 🧠 Advanced AI Core
+- **Gemini Integration**: Seamless access to Gemini Flash, Pro, and Thinking models.
+- **Multi-Agent System (MAS)**: Orchestrate specialized agents (Coder, Researcher, Planner) to solve complex tasks.
+- **Long-Term Memory**: ChromaDB-backed vector store for semantic context retention across sessions.
 
-### 🧠 Advanced AI Capabilities
-- **Gemini Integration**: Powered by the latest Google Gemini models (Flash, Pro, Thinking).
-- **Multi-Agent System (MAS)**: Orchestrate specialized sub-agents (Research, Code, File, etc.) for complex, multi-step tasks.
-- **Long-term Memory**: Semantic search powered by ChromaDB vector store for retrieving relevant information from past interactions.
-- **Context Management**: Automatic handling of large contexts, including file attachments and session history.
+### 🖥️ Modern User Interface
+- **Fluent Design**: Beautiful, responsive UI based on Windows 11 design principles.
+- **Project Explorer**: Integrated file browser for context management.
+- **Code & Markdown**: Rich rendering of code blocks and markdown content.
+- **Theme Support**: Native Dark and Light mode support.
 
-### 🛠️ Comprehensive Toolset
-The agent comes equipped with a wide array of built-in tools:
-- **File Operations**: Read, write, search, and manage files across various formats (PDF, DOCX, XLSX, PPTX, etc.).
-- **System Control**: Monitor processes, execute shell commands, and manage system resources.
-- **Code Analysis**: Analyze Python code for complexity, style, and potential issues; perform automated refactoring.
-- **Git Integration**: Full support for Git operations (clone, commit, push, pull, branch management).
-- **Web & Data**: Fetch URLs, perform web searches, and execute SQL queries.
-- **Visualization**: Generate charts and plots (Line, Bar, Scatter, Pie) from data.
-- **Knowledge Management**: Maintain a personal knowledge graph and structured notes.
+### 🛠️ Powerful Toolset
+- **System Operations**: Execute shell commands, manage processes, and monitor resources.
+- **File Management**: Read/Write support for PDF, DOCX, XLSX, PPTX, and code files.
+- **Web Capabilities**: Web search, URL fetching, and dynamic content analysis.
+- **Code Engineering**: AST-based analysis, refactoring, and git integration.
 
 ### 🔌 Extensibility
-- **Model Context Protocol (MCP)**: Seamlessly connect to external MCP servers to expand the agent's capabilities.
-- **Plugin System**: Install and manage third-party plugins to add new features and tools.
-- **Conductor Orchestrator**: Define and execute custom workflows and domain-specific commands.
+- **MCP Support**: Connect to external Model Context Protocol servers.
+- **Plugin Architecture**: Easily extend functionality with custom plugins.
+- **Conductor**: Define custom automation workflows.
+
+---
 
 ## 🛠️ Installation
 
 ### Prerequisites
-- Python 3.10 or higher
-- A Google Gemini API Key
+- **Python 3.10** or higher.
+- A **Google Gemini API Key** (Get it from [Google AI Studio](https://aistudio.google.com/)).
 
-### Setup
-1. **Clone the repository**:
+### Step-by-Step Guide
+
+1. **Clone the Repository**
    ```bash
    git clone https://github.com/codebutut/Gemini-AI.git
    cd Gemini-AI
    ```
 
-2. **Install dependencies**:
+2. **Create a Virtual Environment** (Recommended)
+   ```bash
+   python -m venv venv
+   # Windows
+   venv\Scripts\activate
+   # Linux/macOS
+   source venv/bin/activate
+   ```
+
+3. **Install Dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Configure Environment**:
-   Create a `.env` file in the root directory and add your Gemini API key:
+4. **Setup Environment Variables**
+   Create a `.env` file in the root directory:
    ```env
-   GOOGLE_API_KEY=your_api_key_here
+   GOOGLE_API_KEY=your_actual_api_key_here
    ```
 
-4. **Run the application**:
-   ```bash
-   python run.py
-   ```
+---
 
-## 📖 Usage Guide
+## ⚙️ Configuration
 
-### Basic Interaction
-- Type your prompt in the input field at the bottom and press Enter or click the send icon.
-- Use the `+` button to attach files or folders to the conversation.
+### `settings.json`
+The application uses `settings.json` for persistent user preferences. This is automatically generated on first run but can be manually edited to configure:
+- **Theme**: `Dark` or `Light`.
+- **Model**: Default Gemini model version.
+- **Paths**: Custom paths for downloads or workspace.
 
-### Special Commands
-- `/search <query>`: Perform a semantic search across your chat history and indexed documents.
-- `/mas`: Explicitly trigger the Multi-Agent System for the current prompt.
-- `/conductor`: Open the Conductor Orchestrator to run predefined workflows.
-- `/clear`: Clear the current chat display.
-
-### Managing Extensions
-You can manage extensions via the GUI (Settings -> Manage Plugins) or the CLI:
-```bash
-python run.py extension list
-python run.py extension install-plugin <package-name>
-python run.py extension add-mcp <name> <command> --args <args>
+### `mcp_config.json`
+Configure external MCP servers here. Example:
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+    }
+  }
+}
 ```
+
+---
+
+## 📖 Usage
+
+### Starting the Application
+```bash
+python run.py
+```
+
+### Interface Guide
+- **Chat Area**: Main interaction hub. Type prompts, paste code, or drag-and-drop files.
+- **Sidebar**: Access History, Files, and Settings.
+- **Command Palette**:
+    - `/search <query>`: Search past conversations and indexed files.
+    - `/mas <prompt>`: Delegate task to the Multi-Agent System.
+    - `/conductor`: Open the workflow orchestrator.
+
+---
 
 ## 🏗️ Architecture
 
-The project follows a modular architecture:
-- **`src/gemini_agent/ui/`**: Contains all PyQt6 components and theme management.
-- **`src/gemini_agent/core/`**: The heart of the application, including:
-    - `worker.py`: Asynchronous AI interaction logic.
-    - `tool_executor.py`: Safe execution of registered tools.
-    - `mas/`: Orchestration logic for multiple agents.
-    - `extension_manager.py`: Handling of plugins and MCP servers.
-- **`conductor/`**: Configuration and scripts for automated workflows.
+The project is structured for modularity and scalability:
 
+- **`src/gemini_agent/ui/`**: PyQt6 frontend components.
+- **`src/gemini_agent/core/`**: Backend logic, including the Agent loop, Tool Executor, and Memory Manager.
+- **`src/gemini_agent/core/mas/`**: Multi-Agent System logic.
+- **`plugins/`**: Directory for user-installed extensions.
 
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4. Push to the branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request.
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.

@@ -1,3 +1,4 @@
+import qtawesome as qta
 from PyQt6.QtCore import Qt, pyqtSignal, QSize
 from PyQt6.QtWidgets import (
     QFrame,
@@ -17,7 +18,10 @@ class RecentItemWidget(QWidget):
     Supports word wrap for long titles and ensures full visibility.
     Features a grey bubble background for the text.
     """
-    def __init__(self, name: str, path: str, item_type: str, parent: QWidget | None = None):
+
+    def __init__(
+        self, name: str, path: str, item_type: str, parent: QWidget | None = None
+    ):
         super().__init__(parent)
         self.layout = QHBoxLayout(self)
         # Minimal margins for the outer widget
@@ -26,26 +30,33 @@ class RecentItemWidget(QWidget):
         self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         if item_type == "file":
-            icon = "📄"
+            icon_name = "fa5s.file-alt"
+            icon_color = "#A0A0A0"
         elif item_type == "folder" or item_type == "project":
-            icon = "📁"
+            icon_name = "fa5s.folder"
+            icon_color = "#4da6ff"
         elif item_type == "chat":
-            icon = "💬"
+            icon_name = "fa5s.comment-dots"
+            icon_color = "#50fa7b"
         else:
-            icon = "📄"
+            icon_name = "fa5s.file"
+            icon_color = "#A0A0A0"
 
-        self.icon_label = QLabel(icon)
+        self.icon_label = QLabel()
+        self.icon_label.setPixmap(qta.icon(icon_name, color=icon_color).pixmap(16, 16))
         self.icon_label.setFixedWidth(24)
-        self.icon_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-        self.icon_label.setStyleSheet("font-size: 14px; margin-top: 6px;")
-        
+        self.icon_label.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter
+        )
+        self.icon_label.setStyleSheet("margin-top: 8px;")
+
         # Bubble container for the text
         self.bubble_frame = QFrame()
         self.bubble_frame.setObjectName("RecentBubble")
         self.bubble_layout = QVBoxLayout(self.bubble_frame)
         self.bubble_layout.setContentsMargins(10, 8, 10, 8)
         self.bubble_layout.setSpacing(0)
-        
+
         self.name_label = QLabel(name)
         self.name_label.setStyleSheet("""
             font-weight: 500; 
@@ -56,10 +67,12 @@ class RecentItemWidget(QWidget):
         """)
         self.name_label.setWordWrap(True)
         # Allow the label to expand vertically as needed
-        self.name_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        
+        self.name_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
+
         self.bubble_layout.addWidget(self.name_label)
-        
+
         # Grey background for the bubble - using a slightly lighter grey than the sidebar
         self.bubble_frame.setStyleSheet("""
             QFrame#RecentBubble {
@@ -68,10 +81,10 @@ class RecentItemWidget(QWidget):
                 border: 1px solid #444444;
             }
         """)
-        
+
         self.layout.addWidget(self.icon_label)
         self.layout.addWidget(self.bubble_frame, 1)
-        
+
         if path:
             self.setToolTip(path)
 
@@ -90,6 +103,7 @@ class RecentWidget(QFrame):
     """
     Widget displaying a list of recent items, including files, folders, and chats.
     """
+
     item_selected = pyqtSignal(str, str)  # path/id, type
 
     def __init__(self, parent: QWidget | None = None):
@@ -105,7 +119,9 @@ class RecentWidget(QFrame):
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(10, 5, 10, 5)
         self.title_label = QLabel("Recent")
-        self.title_label.setStyleSheet("font-weight: bold; color: #888; font-size: 12px;")
+        self.title_label.setStyleSheet(
+            "font-weight: bold; color: #888; font-size: 12px;"
+        )
         header_layout.addWidget(self.title_label)
         header_layout.addStretch()
         layout.addLayout(header_layout)
@@ -139,26 +155,26 @@ class RecentWidget(QFrame):
         Each item should be a dict with: 'name', 'path' (or 'id'), 'type'.
         """
         self.list_widget.clear()
-        
-        # SidebarContainer width is 280. 
+
+        # SidebarContainer width is 280.
         # Subtracting Sidebar margins and ListWidget padding/scrollbars.
         # We use a slightly smaller width to ensure word wrap triggers correctly.
-        available_width = 230 
+        available_width = 230
 
         for item in items:
             list_item = QListWidgetItem(self.list_widget)
             list_item.setData(Qt.ItemDataRole.UserRole, item)
-            
+
             path = item.get("path") or item.get("id")
             custom_widget = RecentItemWidget(item["name"], path, item["type"])
-            
-            # Force the widget to a specific width so sizeHint() can calculate 
+
+            # Force the widget to a specific width so sizeHint() can calculate
             # the correct height based on word wrapping.
             custom_widget.setFixedWidth(available_width)
-            
+
             # Set the size hint for the list item based on the calculated widget size
             list_item.setSizeHint(custom_widget.sizeHint())
-            
+
             self.list_widget.addItem(list_item)
             self.list_widget.setItemWidget(list_item, custom_widget)
 

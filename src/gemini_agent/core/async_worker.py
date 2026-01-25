@@ -74,7 +74,12 @@ class AsyncGeminiWorker(QObject):
     def cancel(self):
         self._is_cancelled = True
 
-    def confirm_tool(self, confirmation_id: str, allowed: bool, modified_args: dict[str, Any] | None = None) -> None:
+    def confirm_tool(
+        self,
+        confirmation_id: str,
+        allowed: bool,
+        modified_args: dict[str, Any] | None = None,
+    ) -> None:
         """Called by the UI thread to provide confirmation result."""
         if self._current_confirmation_id == confirmation_id:
             self._confirmation_result = allowed
@@ -107,7 +112,9 @@ class AsyncGeminiWorker(QObject):
         await self._confirmation_event.wait()
         return self._confirmation_result, self._confirmation_modified_args
 
-    def _create_config(self, tools_config: types.Tool | None = None) -> types.GenerateContentConfig:
+    def _create_config(
+        self, tools_config: types.Tool | None = None
+    ) -> types.GenerateContentConfig:
         config_args = {
             "temperature": self.config.temperature,
             "top_p": self.config.top_p,
@@ -119,7 +126,9 @@ class AsyncGeminiWorker(QObject):
         if self.config.thinking_enabled:
             try:
                 if hasattr(types, "ThinkingConfig"):
-                    config_args["thinking_config"] = types.ThinkingConfig(include_thoughts=True)
+                    config_args["thinking_config"] = types.ThinkingConfig(
+                        include_thoughts=True
+                    )
                 if self.config.thinking_budget > 0:
                     config_args["max_output_tokens"] = self.config.thinking_budget
             except Exception as e:
@@ -140,8 +149,12 @@ class AsyncGeminiWorker(QObject):
             loop = asyncio.get_running_loop()
             self._loop = loop
 
-            def sync_confirmation_callback(fn_name: str, fn_args: dict[str, Any]) -> tuple[bool, dict[str, Any] | None]:
-                future = asyncio.run_coroutine_threadsafe(self._request_tool_confirmation(fn_name, fn_args), loop)
+            def sync_confirmation_callback(
+                fn_name: str, fn_args: dict[str, Any]
+            ) -> tuple[bool, dict[str, Any] | None]:
+                future = asyncio.run_coroutine_threadsafe(
+                    self._request_tool_confirmation(fn_name, fn_args), loop
+                )
                 return future.result()
 
             self.tool_executor = ToolExecutor(
@@ -154,7 +167,9 @@ class AsyncGeminiWorker(QObject):
             self.tool_executor.current_specs = self.config.initial_specs
 
             # 1. Prepare History
-            gemini_contents = self.context_manager.prepare_history(self.config.history_context)
+            gemini_contents = self.context_manager.prepare_history(
+                self.config.history_context
+            )
 
             # 2. Prepare Current Turn Content
             current_turn_parts = self.context_manager.prepare_current_turn(
@@ -166,7 +181,9 @@ class AsyncGeminiWorker(QObject):
             gemini_contents.append(types.Content(role="user", parts=current_turn_parts))
 
             # 3. Detect mode
-            mode = self.mode_detector.detect_mode(self.config.prompt, self.config.use_grounding)
+            mode = self.mode_detector.detect_mode(
+                self.config.prompt, self.config.use_grounding
+            )
             self.log.info(f"Using mode: {mode}")
 
             # 4. Execute
@@ -180,14 +197,18 @@ class AsyncGeminiWorker(QObject):
         finally:
             AsyncGeminiWorker.RATE_LIMITER.release()
 
-    async def _run_grounding_mode(self, client: genai.Client, gemini_contents: list[types.Content]) -> None:
+    async def _run_grounding_mode(
+        self, client: genai.Client, gemini_contents: list[types.Content]
+    ) -> None:
         self.status_update.emit("🔍 Searching the web...")
 
         await AsyncGeminiWorker.RATE_LIMITER.acquire_async()
         if self._is_cancelled:
             return
 
-        config = self._create_config(tools_config=types.Tool(google_search=types.GoogleSearch()))
+        config = self._create_config(
+            tools_config=types.Tool(google_search=types.GoogleSearch())
+        )
 
         try:
             # Use aio for async call
@@ -208,7 +229,9 @@ class AsyncGeminiWorker(QObject):
 
         except Exception as api_error:
             if "Tool use with function calling is unsupported" in str(api_error):
-                self.status_update.emit("⚠️ Web search not available, using local tools...")
+                self.status_update.emit(
+                    "⚠️ Web search not available, using local tools..."
+                )
                 await self._handle_function_calls(client, gemini_contents)
             else:
                 raise api_error
@@ -226,12 +249,18 @@ class AsyncGeminiWorker(QObject):
         self.log.error(f"Worker Error: {error_str}", exc_info=True)
         if "ResourceExhausted" in error_str or "429" in error_str:
             self.error.emit(f"Rate limit exceeded. Please wait. Details: {e}")
-        elif "GoogleAuthError" in error_str or "401" in error_str or "Unauthenticated" in error_str:
+        elif (
+            "GoogleAuthError" in error_str
+            or "401" in error_str
+            or "Unauthenticated" in error_str
+        ):
             self.error.emit(f"Authentication error. Check API key. Details: {e}")
         else:
             self.error.emit(f"An unexpected error occurred: {e}")
 
-    async def _manage_context(self, gemini_contents: list[types.Content], max_turns: int = 10) -> list[types.Content]:
+    async def _manage_context(
+        self, gemini_contents: list[types.Content], max_turns: int = 10
+    ) -> list[types.Content]:
         """
         Manages the conversation context to stay within limits and reduce latency.
         Keeps the first user message and the last N turns.
@@ -241,7 +270,9 @@ class AsyncGeminiWorker(QObject):
         if len(gemini_contents) <= max_turns * 2 + 1:
             return gemini_contents
 
-        self.log.info(f"Managing context: reducing {len(gemini_contents)} parts to {max_turns * 2 + 1}")
+        self.log.info(
+            f"Managing context: reducing {len(gemini_contents)} parts to {max_turns * 2 + 1}"
+        )
 
         # Keep the first message (usually the task description)
         new_contents = [gemini_contents[0]]
@@ -251,23 +282,35 @@ class AsyncGeminiWorker(QObject):
 
         return new_contents
 
-    async def _handle_function_calls(self, client: genai.Client, gemini_contents: list[types.Content]) -> None:
+    async def _handle_function_calls(
+        self, client: genai.Client, gemini_contents: list[types.Content]
+    ) -> None:
         final_response_text = ""
         loop_active = True
         turn_count = 0
         progress_metrics = []
         last_output = None
 
-        extra_tools = self.config.extension_manager.get_all_tools() if self.config.extension_manager else []
+        extra_tools = (
+            self.config.extension_manager.get_all_tools()
+            if self.config.extension_manager
+            else []
+        )
         tools_config = tools.get_tool_config(extra_declarations=extra_tools)
 
-        while loop_active and turn_count < self.config.max_turns and not self._is_cancelled:
+        while (
+            loop_active
+            and turn_count < self.config.max_turns
+            and not self._is_cancelled
+        ):
             turn_count += 1
 
             # Manage context window before each turn to keep latency low
             gemini_contents = await self._manage_context(gemini_contents)
 
-            self.status_update.emit(f"🔄 Thinking (Turn {turn_count}/{self.config.max_turns})...")
+            self.status_update.emit(
+                f"🔄 Thinking (Turn {turn_count}/{self.config.max_turns})..."
+            )
 
             await AsyncGeminiWorker.RATE_LIMITER.acquire_async()
             if self._is_cancelled:
@@ -303,9 +346,15 @@ class AsyncGeminiWorker(QObject):
 
                     # Parallel execution using asyncio.gather later
                     if asyncio.iscoroutinefunction(self.tool_executor.execute):
-                        function_tasks.append(self.tool_executor.execute(fn_name, fn_args))
+                        function_tasks.append(
+                            self.tool_executor.execute(fn_name, fn_args)
+                        )
                     else:
-                        function_tasks.append(asyncio.to_thread(self.tool_executor.execute, fn_name, fn_args))
+                        function_tasks.append(
+                            asyncio.to_thread(
+                                self.tool_executor.execute, fn_name, fn_args
+                            )
+                        )
 
             function_responses = []
             if function_tasks:
@@ -321,35 +370,54 @@ class AsyncGeminiWorker(QObject):
                         self.plan_updated.emit(self.tool_executor.current_plan)
                     if (
                         fn_name in ["update_specs", "write_file"]
-                        and self.tool_executor.current_specs != self.config.initial_specs
+                        and self.tool_executor.current_specs
+                        != self.config.initial_specs
                     ):
                         self.specs_updated.emit(self.tool_executor.current_specs)
 
                     current_output = f"{fn_name}:{str(result)[:50]}"
-                    progress_metrics.append("progress_made" if current_output != last_output else "no_progress")
+                    progress_metrics.append(
+                        "progress_made"
+                        if current_output != last_output
+                        else "no_progress"
+                    )
                     last_output = current_output
 
                     function_responses.append(
-                        types.Part.from_function_response(name=fn_name, response={"result": result})
+                        types.Part.from_function_response(
+                            name=fn_name, response={"result": result}
+                        )
                     )
 
             if function_responses:
                 if self._is_stuck(progress_metrics):
-                    final_response_text = "[System: Agent stuck in repetitive loop. Process stopped.]"
+                    final_response_text = (
+                        "[System: Agent stuck in repetitive loop. Process stopped.]"
+                    )
                     loop_active = False
                 else:
-                    gemini_contents.append(types.Content(role="user", parts=function_responses))
-                    self.status_update.emit(f"🔄 Processing results (Turn {turn_count}/{self.config.max_turns})...")
+                    gemini_contents.append(
+                        types.Content(role="user", parts=function_responses)
+                    )
+                    self.status_update.emit(
+                        f"🔄 Processing results (Turn {turn_count}/{self.config.max_turns})..."
+                    )
             else:
                 try:
                     final_response_text = response.text or "(Task completed silently)"
                 except Exception:
-                    final_response_text = "(Task completed, but text response was unavailable)"
+                    final_response_text = (
+                        "(Task completed, but text response was unavailable)"
+                    )
                 loop_active = False
 
         if turn_count >= self.config.max_turns:
             max_turn_msg = f"[System: Max agent turns reached ({self.config.max_turns}). Process stopped.]"
-            final_response_text = f"{final_response_text}\n\n{max_turn_msg}" if final_response_text else max_turn_msg
+            final_response_text = (
+                f"{final_response_text}\n\n{max_turn_msg}"
+                if final_response_text
+                else max_turn_msg
+            )
 
         if not self._is_cancelled:
             self.finished.emit(final_response_text)
@@ -362,7 +430,9 @@ class AsyncGeminiWorker(QObject):
             or candidate.content.parts is None
         ):
             finish_reason = getattr(candidate, "finish_reason", "UNKNOWN")
-            error_msg = f"API returned an empty response (Finish Reason: {finish_reason})."
+            error_msg = (
+                f"API returned an empty response (Finish Reason: {finish_reason})."
+            )
             if finish_reason == "SAFETY":
                 error_msg = "Response blocked by safety filters."
             self.error.emit(error_msg)
@@ -370,7 +440,9 @@ class AsyncGeminiWorker(QObject):
         return True
 
     def _is_stuck(self, progress_metrics: list[str]) -> bool:
-        return len(progress_metrics) >= 3 and all(p == "no_progress" for p in progress_metrics[-3:])
+        return len(progress_metrics) >= 3 and all(
+            p == "no_progress" for p in progress_metrics[-3:]
+        )
 
 
 class AsyncWorkerThread(QThread):

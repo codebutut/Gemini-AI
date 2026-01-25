@@ -19,7 +19,12 @@ class ExtensionManager:
     Provides an automated mechanism to Install, Uninstall, or Configure extensions.
     """
 
-    def __init__(self, plugins_dir: str = "plugins", config_dir: str = "config", mcp_config_path: str = "mcp_config.json"):
+    def __init__(
+        self,
+        plugins_dir: str = "plugins",
+        config_dir: str = "config",
+        mcp_config_path: str = "mcp_config.json",
+    ):
         self.plugins_dir = Path(plugins_dir)
         self.config_dir = Path(config_dir)
         self.mcp_config_path = Path(mcp_config_path)
@@ -37,7 +42,11 @@ class ExtensionManager:
         """Discover and load plugins from the plugins directory."""
         self.plugins = {}
         for item in self.plugins_dir.iterdir():
-            if item.is_file() and item.suffix == ".py" and not item.name.startswith("__"):
+            if (
+                item.is_file()
+                and item.suffix == ".py"
+                and not item.name.startswith("__")
+            ):
                 self.load_plugin(str(item))
             elif item.is_dir() and not item.name.startswith("__"):
                 # Check for __init__.py in directory
@@ -58,7 +67,11 @@ class ExtensionManager:
                 spec.loader.exec_module(module)
 
                 for _name, obj in inspect.getmembers(module):
-                    if inspect.isclass(obj) and issubclass(obj, Plugin) and obj is not Plugin:
+                    if (
+                        inspect.isclass(obj)
+                        and issubclass(obj, Plugin)
+                        and obj is not Plugin
+                    ):
                         plugin_instance = obj()
                         plugin_instance.filepath = filepath
                         config_path = self.config_dir / f"{plugin_instance.name}.json"
@@ -72,7 +85,17 @@ class ExtensionManager:
         """Install a plugin from PyPI."""
         try:
             # Install to plugins directory
-            subprocess.check_call([os.sys.executable, "-m", "pip", "install", "-t", str(self.plugins_dir), package_name])
+            subprocess.check_call(
+                [
+                    os.sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "-t",
+                    str(self.plugins_dir),
+                    package_name,
+                ]
+            )
             self.discover_plugins()
             return f"Successfully installed plugin: {package_name}"
         except subprocess.CalledProcessError as e:
@@ -88,18 +111,18 @@ class ExtensionManager:
                 path_to_remove = Path(plugin.filepath)
                 if path_to_remove.name == "__init__.py":
                     path_to_remove = path_to_remove.parent
-                
+
                 if path_to_remove.is_dir():
                     shutil.rmtree(path_to_remove)
                 else:
                     path_to_remove.unlink()
-                
+
                 self.logger.info(f"Uninstalled plugin: {plugin_name}")
                 # Also remove the config file
                 config_path = self.config_dir / f"{plugin.name}.json"
                 if config_path.exists():
                     config_path.unlink()
-                
+
                 del self.plugins[plugin_name]
                 self.discover_plugins()
                 return f"Successfully uninstalled plugin: {plugin_name}"
@@ -138,13 +161,19 @@ class ExtensionManager:
         except Exception as e:
             self.logger.error(f"Failed to save MCP config: {e}")
 
-    def add_mcp_server(self, name: str, command: str, args: List[str], env: Optional[Dict[str, str]] = None) -> str:
+    def add_mcp_server(
+        self,
+        name: str,
+        command: str,
+        args: List[str],
+        env: Optional[Dict[str, str]] = None,
+    ) -> str:
         """Add or update an MCP server configuration."""
         config = self._load_mcp_config()
         config["mcpServers"][name] = {
             "command": command,
             "args": args,
-            "env": env or {}
+            "env": env or {},
         }
         self._save_mcp_config(config)
         return f"Successfully added/updated MCP server: {name}"
@@ -178,8 +207,11 @@ class ExtensionManager:
         """List all installed plugins and MCP servers."""
         mcp_config = self._load_mcp_config()
         return {
-            "plugins": {name: {"version": p.version, "description": p.description} for name, p in self.plugins.items()},
-            "mcp_servers": mcp_config.get("mcpServers", {})
+            "plugins": {
+                name: {"version": p.version, "description": p.description}
+                for name, p in self.plugins.items()
+            },
+            "mcp_servers": mcp_config.get("mcpServers", {}),
         }
 
     def get_all_tools(self) -> list[types.FunctionDeclaration]:

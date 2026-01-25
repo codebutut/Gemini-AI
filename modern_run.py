@@ -1,13 +1,19 @@
+import argparse
 import asyncio
 import logging
 import multiprocessing
 import sys
+import os
 
-from PyQt6.QtWidgets import QApplication
+# Add src directory to sys.path to allow importing gemini_agent
+src_path = os.path.join(os.path.dirname(__file__), "src")
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
+
 from qasync import QEventLoop
+from PyQt6.QtWidgets import QApplication
 
-from gemini_agent.config.app_config import AppConfig
-from gemini_agent.ui.theme_manager import ThemeManager
+from gemini_agent.config.app_config import AppConfig, setup_logging
 from gemini_agent.core.attachment_manager import AttachmentManager
 from gemini_agent.core.checkpoint_manager import CheckpointManager
 from gemini_agent.core.conductor_manager import ConductorManager
@@ -16,19 +22,12 @@ from gemini_agent.core.indexer import Indexer
 from gemini_agent.core.recent_manager import RecentManager
 from gemini_agent.core.session_manager import SessionManager
 from gemini_agent.core.vector_store import VectorStore
-from gemini_agent.ui.main_window import GeminiBrowser
-from gemini_agent.cli import handle_cli
+from gemini_agent.ui.theme_manager import ThemeManager
+from gemini_agent.ui.fluent_main import ModernGeminiBrowser
 
-logger = logging.getLogger(__name__)
-
-
-def main() -> None:
-    """Main entry point for the Gemini AI Agent."""
-    # 1. Handle CLI commands
-    if handle_cli():
-        return
-
-    # 2. Initialize GUI
+def main():
+    setup_logging()
+    
     if sys.platform != "win32":
         try:
             multiprocessing.set_start_method("spawn", force=True)
@@ -36,12 +35,9 @@ def main() -> None:
             pass
 
     app = QApplication(sys.argv)
-
-    # Initialize qasync event loop
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
 
-    # Initialize services (Dependency Injection)
     config = AppConfig()
     theme_mgr = ThemeManager(app)
     session_mgr = SessionManager(AppConfig.HISTORY_FILE)
@@ -54,8 +50,7 @@ def main() -> None:
     extension_mgr = ExtensionManager()
     extension_mgr.discover_plugins()
 
-    # Inject into main window
-    window = GeminiBrowser(
+    window = ModernGeminiBrowser(
         config,
         theme_mgr,
         session_mgr,
@@ -72,9 +67,5 @@ def main() -> None:
     with loop:
         loop.run_forever()
 
-
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        pass
+    main()
